@@ -1,0 +1,66 @@
+services:
+
+  db:
+    image: mysql:latest
+    container_name: smart_gol_db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: smart_gol_db
+      MYSQL_USER: smart_gol_user
+      MYSQL_PASSWORD: smart_gol_pass
+    ports:
+      - "3307:3306"
+    volumes:
+      - smart_gol_mysql_data:/var/lib/mysql
+    networks:
+      - smart_gol_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: smart_gol_backend
+    environment:
+      DATABASE_URL: mysql+pymysql://smart_gol_user:smart_gol_pass@db:3306/smart_gol_db
+      SECRET_KEY: super-secret-key-change-in-production
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: "60"
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    networks:
+      - smart_gol_network
+    restart: unless-stopped
+    command: /bin/sh /app/entrypoint.sh
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: smart_gol_frontend
+    environment:
+      BACKEND_URL: http://backend:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - smart_gol_network
+    restart: unless-stopped
+
+volumes:
+  smart_gol_mysql_data:
+
+networks:
+  smart_gol_network:
+    driver: bridge
