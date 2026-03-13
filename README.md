@@ -23,37 +23,43 @@ docker compose -p smart_gol up --build -d
 | Backend   | [http://localhost:8000](http://localhost:8000) |
 | API Docs  | [http://localhost:8000/docs](http://localhost:8000/docs) |
 
-## 🗄️ Base de Datos y Migraciones (Alembic)
+## 🗄️ Ritual de Cambio en Base de Datos (Alembic)
 
-Ya no utilizamos la creación automática de tablas por código. Ahora todo se gestiona mediante **Alembic** para permitir versiones.
+Cuando quieras hacer un cambio en la base de datos (ej: añadir un campo), sigue estos 4 pasos:
 
-### ¿Cómo se crean/actualizan las tablas?
-Las tablas se crean automáticamente al desplegar con Docker, pero si necesitas hacerlo manual o crear nuevas versiones:
+### 1. Modificar el Código
+Actualiza tus definiciones:
+- **`backend/models.py`**: Añade la columna a la tabla.
+- **`backend/schemas.py`**: Añade el campo al esquema Pydantic.
+- **Frontend**: Actualiza `types.ts` y formularios necesarios.
 
-1. **Generar una nueva migración** (tras cambiar `models.py`):
-   ```bash
-   docker exec smart_gol_backend alembic revision --autogenerate -m "descripcion del cambio"
-   ```
-2. **Aplicar cambios a la DB**:
-   ```bash
-   docker exec smart_gol_backend alembic upgrade head
-   ```
-3. **Ver estado actual**:
-   ```bash
-   docker exec smart_gol_backend alembic current
-   ```
+### 2. Generar el "Mapa de Cambio" (Migración)
+Con Docker corriendo, ejecuta:
+```bash
+docker exec smart_gol_backend alembic revision --autogenerate -m "descripcion_del_cambio"
+```
+*Aparecerá un nuevo archivo en `backend/migrations/versions/`.*
 
-## 🌱 Seeders (Datos Iniciales)
+### 3. Revisar el archivo generado
+Abre el nuevo archivo en `versions/`:
+- **`upgrade()`**: Verifica qué se añade.
+- **`downgrade()`**: Verifica cómo se deshace.
 
-Para poblar la base de datos con un usuario administrador y jugadores de prueba:
+### 4. Aplicar el cambio
+Ejecuta:
+```bash
+docker exec smart_gol_backend alembic upgrade head
+```
+*(O reinicia el contenedor, el `entrypoint.sh` lo hace por ti).*
 
+---
+
+### 💡 Paso Extra: Seeders
+Si el campo es esencial para pruebas, actualiza **`backend/seed.py`** y ejecútalo manualmente:
 ```bash
 docker exec smart_gol_backend python seed.py
 ```
-
-**Credenciales por defecto:**
-- **Email**: `admin@smartgol.com`
-- **Password**: `admin123`
+**Credenciales Admin**: `admin@smartgol.com` / `admin123`
 
 ## Desarrollo Local
 
@@ -61,7 +67,6 @@ docker exec smart_gol_backend python seed.py
 ```bash
 cd backend
 pip install -r requirements.txt
-# Asegúrate de tener las variables de entorno configuradas
 uvicorn main:app --reload
 ```
 
@@ -76,15 +81,11 @@ npm run dev
 ```
 smart_gol/
 ├── backend/
-│   ├── migrations/    # Historial de versiones de la DB (Alembic)
+│   ├── migrations/    # Historial de versiones de la DB
 │   ├── routers/       # Endpoints de la API
-│   ├── models.py      # Definición de tablas
-│   ├── schemas.py     # Validación de datos (Pydantic)
-│   ├── seed.py        # Script para datos iniciales
-│   └── alembic.ini    # Configuración de migraciones
-├── frontend/
-│   ├── app/           # Páginas y componentes (Next.js App Router)
-│   ├── components/    # UI Components (Shadcn)
-│   └── lib/           # Utilidades y tipos
-└── docker-compose.yml
+│   ├── models.py      # Tablas SQLAlchemy
+│   ├── schemas.py     # Pydantic schemas
+│   ├── seed.py        # Datos iniciales (Manual)
+│   └── entrypoint.sh  # Auto-upgrade al iniciar
+└── frontend/          # App Next.js
 ```
