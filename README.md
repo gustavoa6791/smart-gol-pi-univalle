@@ -25,11 +25,11 @@ docker compose -p smart_gol up --build -d
 
 ## 🗄️ Ritual de Cambio en Base de Datos (Alembic)
 
-Cuando quieras hacer un cambio en la base de datos (ej: añadir un campo), sigue estos 4 pasos:
+Cuando quieras hacer un cambio en la base de datos (ej: añadir una nueva tabla o campo), sigue estos 4 pasos:
 
 ### 1. Modificar el Código
 Actualiza tus definiciones:
-- **`backend/models.py`**: Añade la columna a la tabla.
+- **`backend/models.py`**: Define la nueva tabla o añade la columna al modelo.
 - **`backend/schemas.py`**: Añade el campo al esquema Pydantic.
 - **Frontend**: Actualiza `types.ts` y formularios necesarios.
 
