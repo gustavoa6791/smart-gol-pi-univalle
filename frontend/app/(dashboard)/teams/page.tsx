@@ -1,0 +1,452 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { Plus, Pencil, Trash2, Loader2, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import api from "@/lib/api";
+import { Team, TeamCreate, TeamCategory, Player } from "@/lib/types";
+
+const CATEGORY_LABELS: Record<TeamCategory, string> = {
+  sub_10: "Sub-10",
+  sub_12: "Sub-12",
+  sub_14: "Sub-14",
+  sub_16: "Sub-16",
+  sub_18: "Sub-18",
+  senior: "Senior",
+};
+
+const emptyForm: TeamCreate = {
+  name: "",
+  coach_name: "",
+  category: "sub_10",
+  player_ids: [],
+};
+
+export default function TeamsPage() {
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // Dialogs
+  const [formOpen, setFormOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [editingTeam, setEditingTeam] = useState<Team | null>(null);
+  const [deletingTeam, setDeletingTeam] = useState<Team | null>(null);
+
+  // Form state
+  const [form, setForm] = useState<TeamCreate>(emptyForm);
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string>("");
+
+  function loadTeams() {
+    setLoading(true);
+    api.get<Team[]>("/api/teams/")
+      .then((r) => setTeams(r.data))
+      .catch(() => toast.error("Error al cargar equipos"))
+      .finally(() => setLoading(false));
+  }
+
+  function loadPlayers() {
+    api.get<Player[]>("/api/players/")
+      .then((r) => setPlayers(r.data))
+      .catch(() => toast.error("Error al cargar jugadores"));
+  }
+
+  useEffect(() => {
+    loadTeams();
+    loadPlayers();
+  }, []);
+
+  function openCreate() {
+    setEditingTeam(null);
+    setForm({ ...emptyForm, category: "sub_10", player_ids: [] });
+    setSelectedPlayerId("");
+    setFormOpen(true);
+  }
+
+  function openEdit(team: Team) {
+    setEditingTeam(team);
+    setForm({
+      name: team.name,
+      coach_name: team.coach_name,
+      category: team.category,
+      player_ids: team.players?.map(p => p.id) || [],
+    });
+    setSelectedPlayerId("");
+    setFormOpen(true);
+  }
+
+  function openDelete(team: Team) {
+    setDeletingTeam(team);
+    setDeleteOpen(true);
+  }
+
+  function addPlayer() {
+    if (!selectedPlayerId) return;
+    const playerId = parseInt(selectedPlayerId);
+    if (!form.player_ids?.includes(playerId)) {
+      setForm({
+        ...form,
+        player_ids: [...(form.player_ids || []), playerId],
+      });
+    }
+    setSelectedPlayerId("");
+  }
+
+  function removePlayer(playerId: number) {
+    setForm({
+      ...form,
+      player_ids: form.player_ids?.filter(id => id !== playerId) || [],
+    });
+  }
+
+  async function handleSave() {
+    if (!form.name.trim()) {
+      toast.error("El nombre es requerido");
+      return;
+    }
+    if (!form.coach_name.trim()) {
+      toast.error("El nombre del formador es requerido");
+      return;
+    }
+    setSaving(true);
+    const payload: TeamCreate = {
+      name: form.name.trim(),
+      coach_name: form.coach_name.trim(),
+      category: form.category,
+      player_ids: form.player_ids && form.player_ids.length > 0 ? form.player_ids : undefined,
+    };
+    try {
+      if (editingTeam) {
+        await api.put(`/api/teams/${editingTeam.id}`, payload);
+        toast.success("Equipo actualizado");
+      } else {
+        await api.post("/api/teams/", payload);
+        toast.success("Equipo creado");
+      }
+      setFormOpen(false);
+      loadTeams();
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.detail || "Error al guardar";
+      toast.error(errorMsg);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!deletingTeam) return;
+    setSaving(true);
+    try {
+      await api.delete(`/api/teams/${deletingTeam.id}`);
+      toast.success("Equipo eliminado");
+      setDeleteOpen(false);
+      loadTeams();
+    } catch {
+      toast.error("Error al eliminar");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const availablePlayers = players.filter(p => !form.player_ids?.includes(p.id));
+  const selectedPlayers = players.filter(p => form.player_ids?.includes(p.id));
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Equipos</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Gestiona los equipos del torneo
+          </p>
+        </div>
+        <Button onClick={openCreate} className="gap-2">
+          <Plus className="h-4 w-4" />
+          Crear equipo
+        </Button>
+      </div>
+
+      {/* Table Card */}
+      <Card>
+        {loading ? (
+          <CardContent className="flex items-center justify-center py-16 text-muted-foreground gap-2">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            Cargando equipos...
+          </CardContent>
+        ) : teams.length === 0 ? (
+          <CardContent className="flex flex-col items-center justify-center py-16 gap-2 text-muted-foreground">
+            <span className="text-5xl">⚽</span>
+            <p className="font-medium">No hay equipos registrados</p>
+            <p className="text-sm">
+              Haz clic en &quot;Crear equipo&quot; para agregar el primero
+            </p>
+          </CardContent>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-12">ID</TableHead>
+                <TableHead>Nombre</TableHead>
+                <TableHead>Categoría</TableHead>
+                <TableHead>Formador</TableHead>
+                <TableHead>Jugadores</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {teams.map((team) => (
+                <TableRow key={team.id}>
+                  <TableCell className="text-muted-foreground">
+                    {team.id}
+                  </TableCell>
+                  <TableCell className="font-medium">{team.name}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">
+                      {CATEGORY_LABELS[team.category]}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{team.coach_name}</TableCell>
+                  <TableCell>
+                    {team.players && team.players.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {team.players.slice(0, 3).map((player) => (
+                          <Badge key={player.id} variant="outline">
+                            {player.name} {player.surname}
+                          </Badge>
+                        ))}
+                        {team.players.length > 3 && (
+                          <Badge variant="outline">
+                            +{team.players.length - 3}
+                          </Badge>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1"
+                        onClick={() => openEdit(team)}
+                      >
+                        <Pencil className="h-3 w-3" />
+                        Editar
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="gap-1"
+                        onClick={() => openDelete(team)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        Eliminar
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </Card>
+
+      {/* Create / Edit Dialog */}
+      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingTeam ? "Editar equipo" : "Nuevo equipo"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingTeam
+                ? "Modifica los datos del equipo"
+                : "Completa la información del nuevo equipo"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-2">
+            {/* Name */}
+            <div className="space-y-2">
+              <Label htmlFor="f-name">Nombre del equipo *</Label>
+              <Input
+                id="f-name"
+                placeholder="Ej: Los Tigres"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+              />
+            </div>
+
+            {/* Coach Name */}
+            <div className="space-y-2">
+              <Label htmlFor="f-coach">Formador *</Label>
+              <Input
+                id="f-coach"
+                placeholder="Ej: Juan Pérez"
+                value={form.coach_name}
+                onChange={(e) => setForm({ ...form, coach_name: e.target.value })}
+              />
+            </div>
+
+            {/* Category */}
+            <div className="space-y-2">
+              <Label>Categoría *</Label>
+              <Select
+                value={form.category}
+                onValueChange={(v) =>
+                  setForm({ ...form, category: v as TeamCategory })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sub_10">Sub-10</SelectItem>
+                  <SelectItem value="sub_12">Sub-12</SelectItem>
+                  <SelectItem value="sub_14">Sub-14</SelectItem>
+                  <SelectItem value="sub_16">Sub-16</SelectItem>
+                  <SelectItem value="sub_18">Sub-18</SelectItem>
+                  <SelectItem value="senior">Senior</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Players */}
+            <div className="space-y-2">
+              <Label>Jugadores</Label>
+              <div className="flex gap-2">
+                <Select
+                  value={selectedPlayerId}
+                  onValueChange={(value) => setSelectedPlayerId(value || "")}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar jugador" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availablePlayers.length === 0 ? (
+                      <SelectItem value="" disabled>
+                        No hay jugadores disponibles
+                      </SelectItem>
+                    ) : (
+                      availablePlayers.map((player) => (
+                        <SelectItem key={player.id} value={player.id.toString()}>
+                          {player.name} {player.surname} {player.number && `#${player.number}`}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addPlayer}
+                  disabled={!selectedPlayerId}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              {/* Selected Players */}
+              {selectedPlayers.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {selectedPlayers.map((player) => (
+                    <Badge
+                      key={player.id}
+                      variant="secondary"
+                      className="gap-1 pr-1"
+                    >
+                      {player.name} {player.surname}
+                      <button
+                        type="button"
+                        onClick={() => removePlayer(player.id)}
+                        className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFormOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSave} disabled={saving} className="gap-2">
+              {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+              {editingTeam ? "Guardar cambios" : "Crear equipo"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm Dialog */}
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>¿Eliminar equipo?</DialogTitle>
+            <DialogDescription>
+              Esta acción eliminará el equipo{" "}
+              <strong>{deletingTeam?.name}</strong> permanentemente y no se
+              puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={saving}
+              className="gap-2"
+            >
+              {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+              Eliminar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

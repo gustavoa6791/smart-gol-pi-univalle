@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Optional, List
 from enum import Enum
 from datetime import datetime, date
 
@@ -68,6 +68,45 @@ class PlayerOut(PlayerBase):
     id: int
     created_at: datetime
     updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+# ─── Team Schemas ────────────────────────────────────────────────────────────
+
+class TeamCategory(str, Enum):
+    sub_10 = "sub_10"
+    sub_12 = "sub_12"
+    sub_14 = "sub_14"
+    sub_16 = "sub_16"
+    sub_18 = "sub_18"
+    senior = "senior"
+
+
+class TeamBase(BaseModel):
+    name: str
+    category: TeamCategory
+    coach_name: str
+    player_ids: Optional[List[int]] = None  # Lista de IDs de jugadores
+
+
+class TeamCreate(TeamBase):
+    pass
+
+
+class TeamUpdate(BaseModel):
+    name: Optional[str] = None
+    category: Optional[TeamCategory] = None
+    coach_name: Optional[str] = None
+    player_ids: Optional[List[int]] = None
+
+
+class TeamOut(TeamBase):
+    id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    players: Optional[List[PlayerOut]] = None
 
     class Config:
         from_attributes = True

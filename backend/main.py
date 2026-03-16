@@ -19,9 +19,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from routers import auth, players
+from routers import auth, players, teams
 app.include_router(auth.router)
 app.include_router(players.router)
+app.include_router(teams.router)
 
 
 @app.on_event("startup")

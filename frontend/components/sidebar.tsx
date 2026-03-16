@@ -12,12 +12,14 @@ import {
   LogOut,
   ChevronFirst,
   ChevronLast,
+  Trophy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/players", label: "Jugadores", icon: Users },
+  { href: "/teams", label: "Equipos", icon: Trophy },
 ];
 
 export function Sidebar() {
