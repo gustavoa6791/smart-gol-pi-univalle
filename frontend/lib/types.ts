@@ -47,6 +47,8 @@ export interface Team {
   created_at: string;
   updated_at?: string;
   players?: Player[];
+  leader_id?: number | null;
+  leader?: Player | null;
 }
 
 export interface TeamCreate {
@@ -54,4 +56,5 @@ export interface TeamCreate {
   category: TeamCategory;
   coach_name: string;
   player_ids?: number[];
+  leader_id?: number | null;
 }

@@ -66,8 +66,10 @@ class Team(Base):
     name = Column(String(150), nullable=False, index=True)
     category = Column(Enum(TeamCategory), nullable=False, index=True)
     coach_name = Column(String(150), nullable=False)  # Nombre del formador como texto
+    leader_id = Column(Integer, ForeignKey("players.id"), nullable=True, index=True)  # Un solo líder por equipo
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relación many-to-many con Player
     players = relationship("Player", secondary=team_players, backref="teams")
+    leader = relationship("Player", foreign_keys=[leader_id])

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Loader2, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, X, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -54,6 +54,7 @@ const emptyForm: TeamCreate = {
   coach_name: "",
   category: "sub_10",
   player_ids: [],
+  leader_id: undefined,
 };
 
 export default function TeamsPage() {
@@ -105,6 +106,7 @@ export default function TeamsPage() {
       coach_name: team.coach_name,
       category: team.category,
       player_ids: team.players?.map(p => p.id) || [],
+      leader_id: team.leader_id ?? undefined,
     });
     setSelectedPlayerId("");
     setFormOpen(true);
@@ -128,9 +130,11 @@ export default function TeamsPage() {
   }
 
   function removePlayer(playerId: number) {
+    const newPlayerIds = form.player_ids?.filter(id => id !== playerId) || [];
     setForm({
       ...form,
-      player_ids: form.player_ids?.filter(id => id !== playerId) || [],
+      player_ids: newPlayerIds,
+      leader_id: form.leader_id === playerId ? undefined : form.leader_id,
     });
   }
 
@@ -149,6 +153,7 @@ export default function TeamsPage() {
       coach_name: form.coach_name.trim(),
       category: form.category,
       player_ids: form.player_ids && form.player_ids.length > 0 ? form.player_ids : undefined,
+      leader_id: form.leader_id && form.player_ids?.includes(form.leader_id) ? form.leader_id : undefined,
     };
     try {
       if (editingTeam) {
@@ -184,7 +189,12 @@ export default function TeamsPage() {
   }
 
   const availablePlayers = players.filter(p => !form.player_ids?.includes(p.id));
-  const selectedPlayers = players.filter(p => form.player_ids?.includes(p.id));
+  const selectedPlayers: Player[] =
+    editingTeam?.players && form.player_ids?.length
+      ? form.player_ids
+          .map((id) => editingTeam.players!.find((p) => p.id === id))
+          .filter((p): p is Player => p != null)
+      : players.filter((p) => form.player_ids?.includes(p.id));
 
   return (
     <div className="space-y-8">
@@ -227,6 +237,7 @@ export default function TeamsPage() {
                 <TableHead className="font-bold text-gray-900 py-4 px-4">Nombre</TableHead>
                 <TableHead className="font-bold text-gray-900 py-4 px-4">Categoría</TableHead>
                 <TableHead className="font-bold text-gray-900 py-4 px-4">Formador</TableHead>
+                <TableHead className="font-bold text-gray-900 py-4 px-4">Líder</TableHead>
                 <TableHead className="font-bold text-gray-900 py-4 px-4">Jugadores</TableHead>
                 <TableHead className="text-right font-bold text-gray-900 py-4 px-4">Acciones</TableHead>
               </TableRow>
@@ -244,6 +255,16 @@ export default function TeamsPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="font-medium text-gray-700 py-4 px-4">{team.coach_name}</TableCell>
+                  <TableCell className="py-4 px-4">
+                    {team.leader ? (
+                      <Badge className="gap-1 bg-gradient-to-r from-amber-400 to-amber-500 text-white border-0 font-semibold shadow-md">
+                        <UserRound className="h-3 w-3" />
+                        {team.leader.name} {team.leader.surname}
+                      </Badge>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
+                  </TableCell>
                   <TableCell className="py-4 px-4">
                     {team.players && team.players.length > 0 ? (
                       <div className="flex flex-wrap gap-2">
@@ -413,6 +434,41 @@ export default function TeamsPage() {
                 </div>
               )}
             </div>
+
+            {/* Líder del equipo (capitán/contacto) */}
+            {(form.player_ids?.length ?? 0) > 0 && (
+              <div className="space-y-3 pt-4 border-t border-green-200">
+                <Label className="flex items-center gap-2 font-semibold text-gray-900">
+                  <UserRound className="h-4 w-4 text-green-600" />
+                  Líder del equipo (capitán/contacto)
+                </Label>
+                <Select
+                  value={form.leader_id?.toString() ?? "none"}
+                  onValueChange={(v) =>
+                    setForm({
+                      ...form,
+                      leader_id: v && v !== "none" ? parseInt(v, 10) : undefined,
+                    })
+                  }
+                >
+                  <SelectTrigger className="border-2 border-green-300 focus:ring-green-500 focus:border-green-500">
+                    <SelectValue placeholder="Ninguno" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Ninguno</SelectItem>
+                    {selectedPlayers.map((player) => (
+                      <SelectItem key={player.id} value={player.id.toString()}>
+                        {player.name} {player.surname}
+                        {player.number != null && ` #${player.number}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Solo puede haber un líder por equipo. Debe estar en la lista de jugadores.
+                </p>
+              </div>
+            )}
           </div>
 
           <DialogFooter>

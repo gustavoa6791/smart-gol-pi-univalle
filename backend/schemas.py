@@ -92,7 +92,7 @@ class TeamBase(BaseModel):
 
 
 class TeamCreate(TeamBase):
-    pass
+    leader_id: Optional[int] = None  # Líder del equipo (debe estar en player_ids)
 
 
 class TeamUpdate(BaseModel):
@@ -100,6 +100,7 @@ class TeamUpdate(BaseModel):
     category: Optional[TeamCategory] = None
     coach_name: Optional[str] = None
     player_ids: Optional[List[int]] = None
+    leader_id: Optional[int] = None  # Líder del equipo (debe ser miembro del equipo)
 
 
 class TeamOut(TeamBase):
@@ -107,6 +108,13 @@ class TeamOut(TeamBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     players: Optional[List[PlayerOut]] = None
+    leader_id: Optional[int] = None
+    leader: Optional[PlayerOut] = None  # Datos del jugador líder (capitán/contacto)
 
     class Config:
         from_attributes = True
+
+
+class SetLeaderBody(BaseModel):
+    """Solo se puede designar un líder por equipo; el jugador debe estar en el equipo."""
+    player_id: Optional[int] = None  # null para quitar el líder
