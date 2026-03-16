@@ -187,14 +187,14 @@ export default function TeamsPage() {
   const selectedPlayers = players.filter(p => form.player_ids?.includes(p.id));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
+        <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">
             Equipos
           </h1>
-          <p className="text-muted-foreground text-sm mt-1 font-medium">
+          <p className="text-muted-foreground text-sm font-medium">
             🏆 Gestiona los equipos del torneo
           </p>
         </div>
@@ -205,7 +205,7 @@ export default function TeamsPage() {
       </div>
 
       {/* Table Card */}
-      <Card className="shadow-xl border-2 border-green-200 bg-white">
+      <Card className="shadow-xl border-2 border-green-200 bg-white overflow-hidden">
         {loading ? (
           <CardContent className="flex items-center justify-center py-16 text-muted-foreground gap-2">
             <Loader2 className="h-5 w-5 animate-spin" />
@@ -222,31 +222,31 @@ export default function TeamsPage() {
         ) : (
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">ID</TableHead>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Categoría</TableHead>
-                <TableHead>Formador</TableHead>
-                <TableHead>Jugadores</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
+              <TableRow className="bg-gradient-to-r from-green-50 to-green-100">
+                <TableHead className="w-12 font-bold text-gray-900 py-4 px-4">ID</TableHead>
+                <TableHead className="font-bold text-gray-900 py-4 px-4">Nombre</TableHead>
+                <TableHead className="font-bold text-gray-900 py-4 px-4">Categoría</TableHead>
+                <TableHead className="font-bold text-gray-900 py-4 px-4">Formador</TableHead>
+                <TableHead className="font-bold text-gray-900 py-4 px-4">Jugadores</TableHead>
+                <TableHead className="text-right font-bold text-gray-900 py-4 px-4">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {teams.map((team) => (
                 <TableRow key={team.id}>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="text-muted-foreground py-4 px-4">
                     {team.id}
                   </TableCell>
-                  <TableCell className="font-bold text-gray-900">{team.name}</TableCell>
-                  <TableCell>
+                  <TableCell className="font-bold text-gray-900 py-4 px-4">{team.name}</TableCell>
+                  <TableCell className="py-4 px-4">
                     <Badge variant="secondary" className="bg-gradient-to-r from-green-400 to-green-500 text-white border-0 font-bold shadow-md px-3 py-1">
                       {CATEGORY_LABELS[team.category]}
                     </Badge>
                   </TableCell>
-                  <TableCell className="font-medium text-gray-700">{team.coach_name}</TableCell>
-                  <TableCell>
+                  <TableCell className="font-medium text-gray-700 py-4 px-4">{team.coach_name}</TableCell>
+                  <TableCell className="py-4 px-4">
                     {team.players && team.players.length > 0 ? (
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex flex-wrap gap-2">
                         {team.players.slice(0, 3).map((player) => (
                           <Badge 
                             key={player.id} 
@@ -266,8 +266,8 @@ export default function TeamsPage() {
                       <span className="text-gray-400">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
+                  <TableCell className="text-right py-4 px-4">
+                    <div className="flex items-center justify-end gap-3">
                       <Button
                         variant="outline"
                         size="sm"
@@ -309,9 +309,9 @@ export default function TeamsPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-2">
+          <div className="grid gap-6 py-2">
             {/* Name */}
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Label htmlFor="f-name">Nombre del equipo *</Label>
               <Input
                 id="f-name"
@@ -322,7 +322,7 @@ export default function TeamsPage() {
             </div>
 
             {/* Coach Name */}
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Label htmlFor="f-coach">Formador *</Label>
               <Input
                 id="f-coach"
@@ -333,7 +333,7 @@ export default function TeamsPage() {
             </div>
 
             {/* Category */}
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Label>Categoría *</Label>
                 <Select
                   value={form.category}
@@ -356,9 +356,9 @@ export default function TeamsPage() {
             </div>
 
             {/* Players */}
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Label>Jugadores</Label>
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                 <Select
                   value={selectedPlayerId}
                   onValueChange={(value) => setSelectedPlayerId(value || "")}

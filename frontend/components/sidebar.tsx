@@ -42,19 +42,19 @@ export function Sidebar() {
       )}
     >
       {/* Logo */}
-      <div className="flex items-center gap-3 px-4 py-4 min-h-[60px] border-b-2 border-green-200 bg-gradient-to-r from-green-50 via-white to-green-50">
-        <span className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 via-green-600 to-green-700 flex items-center justify-center text-white text-xl shadow-lg hover:shadow-xl transition-shadow">
+      <div className="flex items-center gap-4 px-6 h-[60px] border-b-2 border-green-200 bg-gradient-to-r from-green-50 via-white to-green-50">
+        <span className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 via-green-600 to-green-700 flex items-center justify-center text-white text-xl shadow-lg hover:shadow-xl transition-shadow leading-none">
           ⚽
         </span>
         {!collapsed && (
-          <span className="font-bold text-lg tracking-tight whitespace-nowrap overflow-hidden text-gray-900">
+          <span className="font-bold text-lg tracking-tight whitespace-nowrap overflow-hidden text-gray-900 leading-tight">
             Smart Gol
           </span>
         )}
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-3 px-2 flex flex-col gap-1">
+      <nav className="flex-1 py-4 px-3 flex flex-col gap-2">
         {navItems.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + "/");
           return (
@@ -63,7 +63,7 @@ export function Sidebar() {
               href={href}
               title={collapsed ? label : undefined}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                "flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-all duration-200",
                 active 
                   ? "bg-gradient-to-r from-green-500 to-green-600 text-white font-bold shadow-md border-l-4 border-green-700 transform scale-[1.02]" 
                   : "text-gray-700 hover:bg-green-100 hover:text-green-700 hover:shadow-sm"
@@ -81,7 +81,7 @@ export function Sidebar() {
       <Separator />
 
       {/* Footer */}
-      <div className="py-3 px-2 flex flex-col gap-1">
+      <div className="py-4 px-3 flex flex-col gap-2">
         {/* Logout */}
         <button
           onClick={logout}

@@ -22,7 +22,7 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">
           Dashboard
@@ -33,7 +33,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card className="border-2 border-green-300 hover:border-green-500 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 bg-gradient-to-br from-white to-green-50">
           <CardHeader className="flex flex-row items-center justify-between pb-2 bg-gradient-to-r from-green-500 to-green-600 rounded-t-lg">
             <CardTitle className="text-sm font-bold text-white">

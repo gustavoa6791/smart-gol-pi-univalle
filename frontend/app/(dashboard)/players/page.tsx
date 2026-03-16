@@ -173,14 +173,14 @@ export default function PlayersPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
+        <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">
             Jugadores
           </h1>
-          <p className="text-muted-foreground text-sm mt-1 font-medium">
+          <p className="text-muted-foreground text-sm font-medium">
             ⚽ Gestiona el listado de jugadores del equipo
           </p>
         </div>
@@ -191,7 +191,7 @@ export default function PlayersPage() {
       </div>
 
       {/* Table Card */}
-      <Card className="shadow-xl border-2 border-green-200 bg-white">
+      <Card className="shadow-xl border-2 border-green-200 bg-white overflow-hidden">
         {loading ? (
           <CardContent className="flex items-center justify-center py-16 text-muted-foreground gap-2">
             <Loader2 className="h-5 w-5 animate-spin" />
@@ -209,26 +209,26 @@ export default function PlayersPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-gradient-to-r from-green-50 to-green-100">
-                <TableHead className="w-12 font-bold text-gray-900">#</TableHead>
-                <TableHead className="font-bold text-gray-900">Nombre</TableHead>
-                <TableHead className="font-bold text-gray-900">Dorsal</TableHead>
-                <TableHead className="font-bold text-gray-900">Posición</TableHead>
-                <TableHead className="font-bold text-gray-900">Nacionalidad</TableHead>
-                <TableHead className="font-bold text-gray-900">Edad</TableHead>
-                <TableHead className="font-bold text-gray-900">Teléfono</TableHead>
-                <TableHead className="text-right font-bold text-gray-900">Acciones</TableHead>
+                <TableHead className="w-12 font-bold text-gray-900 py-4 px-4">#</TableHead>
+                <TableHead className="font-bold text-gray-900 py-4 px-4">Nombre</TableHead>
+                <TableHead className="font-bold text-gray-900 py-4 px-4">Dorsal</TableHead>
+                <TableHead className="font-bold text-gray-900 py-4 px-4">Posición</TableHead>
+                <TableHead className="font-bold text-gray-900 py-4 px-4">Nacionalidad</TableHead>
+                <TableHead className="font-bold text-gray-900 py-4 px-4">Edad</TableHead>
+                <TableHead className="font-bold text-gray-900 py-4 px-4">Teléfono</TableHead>
+                <TableHead className="text-right font-bold text-gray-900 py-4 px-4">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {players.map((player) => (
                 <TableRow key={player.id}>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="text-muted-foreground py-4 px-4">
                     {player.id}
                   </TableCell>
-                  <TableCell className="font-bold text-gray-900">
+                  <TableCell className="font-bold text-gray-900 py-4 px-4">
                     {player.name} {player.surname}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-4 px-4">
                     {player.number ? (
                       <Badge variant="secondary" className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white border-0 font-bold text-sm shadow-md px-3 py-1">
                         #{player.number}
@@ -237,7 +237,7 @@ export default function PlayersPage() {
                       <span className="text-gray-400">—</span>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-4 px-4">
                     {player.position ? (
                       <Badge 
                         variant={POSITION_VARIANTS[player.position]}
@@ -249,11 +249,11 @@ export default function PlayersPage() {
                       <span className="text-gray-400">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-gray-700">{player.nationality || "—"}</TableCell>
-                  <TableCell className="text-gray-700">{formatDate(player.birth_date)}</TableCell>
-                  <TableCell className="text-gray-700">{player.phone || "—"}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
+                  <TableCell className="text-gray-700 py-4 px-4">{player.nationality || "—"}</TableCell>
+                  <TableCell className="text-gray-700 py-4 px-4">{formatDate(player.birth_date)}</TableCell>
+                  <TableCell className="text-gray-700 py-4 px-4">{player.phone || "—"}</TableCell>
+                  <TableCell className="text-right py-4 px-4">
+                    <div className="flex items-center justify-end gap-3">
                       <Button
                         variant="outline"
                         size="sm"
