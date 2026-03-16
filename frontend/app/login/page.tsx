@@ -46,16 +46,18 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/40 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-green-50 px-4">
       <div className="w-full max-w-sm space-y-6">
         {/* Brand */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary text-primary-foreground text-2xl">
+        <div className="text-center space-y-3">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-green-600 to-green-700 text-white text-3xl shadow-lg">
             ⚽
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Smart Gol</h1>
-          <p className="text-sm text-muted-foreground">
-            Gestión de equipos de fútbol
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">
+            Smart Gol
+          </h1>
+          <p className="text-sm text-muted-foreground font-medium">
+            Gestión profesional de equipos de fútbol
           </p>
         </div>
 

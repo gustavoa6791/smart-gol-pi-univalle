@@ -177,19 +177,21 @@ export default function PlayersPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Jugadores</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Gestiona el listado de jugadores del equipo
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">
+            Jugadores
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1 font-medium">
+            ⚽ Gestiona el listado de jugadores del equipo
           </p>
         </div>
-        <Button onClick={openCreate} className="gap-2">
+        <Button onClick={openCreate} className="gap-2 bg-gradient-to-r from-green-500 via-green-600 to-green-700 hover:from-green-600 hover:via-green-700 hover:to-green-800 text-white font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
           <Plus className="h-4 w-4" />
           Crear jugador
         </Button>
       </div>
 
       {/* Table Card */}
-      <Card>
+      <Card className="shadow-xl border-2 border-green-200 bg-white">
         {loading ? (
           <CardContent className="flex items-center justify-center py-16 text-muted-foreground gap-2">
             <Loader2 className="h-5 w-5 animate-spin" />
@@ -206,15 +208,15 @@ export default function PlayersPage() {
         ) : (
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">#</TableHead>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Dorsal</TableHead>
-                <TableHead>Posición</TableHead>
-                <TableHead>Nacionalidad</TableHead>
-                 <TableHead>Edad</TableHead>
-                <TableHead>Teléfono</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
+              <TableRow className="bg-gradient-to-r from-green-50 to-green-100">
+                <TableHead className="w-12 font-bold text-gray-900">#</TableHead>
+                <TableHead className="font-bold text-gray-900">Nombre</TableHead>
+                <TableHead className="font-bold text-gray-900">Dorsal</TableHead>
+                <TableHead className="font-bold text-gray-900">Posición</TableHead>
+                <TableHead className="font-bold text-gray-900">Nacionalidad</TableHead>
+                <TableHead className="font-bold text-gray-900">Edad</TableHead>
+                <TableHead className="font-bold text-gray-900">Teléfono</TableHead>
+                <TableHead className="text-right font-bold text-gray-900">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -223,34 +225,39 @@ export default function PlayersPage() {
                   <TableCell className="text-muted-foreground">
                     {player.id}
                   </TableCell>
-                  <TableCell className="font-medium">
+                  <TableCell className="font-bold text-gray-900">
                     {player.name} {player.surname}
                   </TableCell>
                   <TableCell>
                     {player.number ? (
-                      <Badge variant="secondary">{player.number}</Badge>
+                      <Badge variant="secondary" className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white border-0 font-bold text-sm shadow-md px-3 py-1">
+                        #{player.number}
+                      </Badge>
                     ) : (
-                      <span className="text-muted-foreground">—</span>
+                      <span className="text-gray-400">—</span>
                     )}
                   </TableCell>
                   <TableCell>
                     {player.position ? (
-                      <Badge variant={POSITION_VARIANTS[player.position]}>
+                      <Badge 
+                        variant={POSITION_VARIANTS[player.position]}
+                        className="bg-gradient-to-r from-green-400 to-green-500 text-white border-0 font-bold shadow-md px-3 py-1"
+                      >
                         {POSITION_LABELS[player.position]}
                       </Badge>
                     ) : (
-                      <span className="text-muted-foreground">—</span>
+                      <span className="text-gray-400">—</span>
                     )}
                   </TableCell>
-                  <TableCell>{player.nationality || "—"}</TableCell>
-                  <TableCell>{formatDate(player.birth_date)}</TableCell>
-                  <TableCell>{player.phone || "—"}</TableCell>
+                  <TableCell className="text-gray-700">{player.nationality || "—"}</TableCell>
+                  <TableCell className="text-gray-700">{formatDate(player.birth_date)}</TableCell>
+                  <TableCell className="text-gray-700">{player.phone || "—"}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        className="gap-1"
+                        className="gap-1 border-2 border-green-500 text-green-700 hover:bg-green-500 hover:text-white font-semibold shadow-sm hover:shadow-md transition-all"
                         onClick={() => openEdit(player)}
                       >
                         <Pencil className="h-3 w-3" />

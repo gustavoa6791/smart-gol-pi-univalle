@@ -42,12 +42,12 @@ export function Sidebar() {
       )}
     >
       {/* Logo */}
-      <div className="flex items-center gap-3 px-4 py-4 min-h-[60px] border-b border-border">
-        <span className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground text-base">
+      <div className="flex items-center gap-3 px-4 py-4 min-h-[60px] border-b-2 border-green-200 bg-gradient-to-r from-green-50 via-white to-green-50">
+        <span className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 via-green-600 to-green-700 flex items-center justify-center text-white text-xl shadow-lg hover:shadow-xl transition-shadow">
           ⚽
         </span>
         {!collapsed && (
-          <span className="font-semibold text-sm tracking-tight whitespace-nowrap overflow-hidden">
+          <span className="font-bold text-lg tracking-tight whitespace-nowrap overflow-hidden text-gray-900">
             Smart Gol
           </span>
         )}
@@ -63,8 +63,10 @@ export function Sidebar() {
               href={href}
               title={collapsed ? label : undefined}
               className={cn(
-                "flex items-center gap-3 rounded-md px-2 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors",
-                active && "bg-accent text-accent-foreground font-medium"
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                active 
+                  ? "bg-gradient-to-r from-green-500 to-green-600 text-white font-bold shadow-md border-l-4 border-green-700 transform scale-[1.02]" 
+                  : "text-gray-700 hover:bg-green-100 hover:text-green-700 hover:shadow-sm"
               )}
             >
               <Icon className="flex-shrink-0 h-5 w-5" />
@@ -84,7 +86,7 @@ export function Sidebar() {
         <button
           onClick={logout}
           title={collapsed ? "Cerrar sesión" : undefined}
-          className="flex items-center gap-3 w-full rounded-md px-2 py-2.5 text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+          className="flex items-center gap-3 w-full rounded-md px-2 py-2.5 text-sm text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors font-medium"
         >
           <LogOut className="flex-shrink-0 h-5 w-5" />
           {!collapsed && <span className="whitespace-nowrap">Cerrar sesión</span>}
@@ -96,7 +98,7 @@ export function Sidebar() {
           size="sm"
           onClick={() => setCollapsed(!collapsed)}
           title={collapsed ? "Expandir menú" : "Contraer menú"}
-          className="flex items-center gap-3 justify-start px-2 text-muted-foreground"
+          className="flex items-center gap-3 justify-start px-2 text-gray-600"
         >
           {collapsed ? (
             <ChevronLast className="h-5 w-5 flex-shrink-0" />

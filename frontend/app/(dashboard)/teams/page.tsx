@@ -191,19 +191,21 @@ export default function TeamsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Equipos</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Gestiona los equipos del torneo
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">
+            Equipos
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1 font-medium">
+            🏆 Gestiona los equipos del torneo
           </p>
         </div>
-        <Button onClick={openCreate} className="gap-2">
+        <Button onClick={openCreate} className="gap-2 bg-gradient-to-r from-green-500 via-green-600 to-green-700 hover:from-green-600 hover:via-green-700 hover:to-green-800 text-white font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
           <Plus className="h-4 w-4" />
           Crear equipo
         </Button>
       </div>
 
       {/* Table Card */}
-      <Card>
+      <Card className="shadow-xl border-2 border-green-200 bg-white">
         {loading ? (
           <CardContent className="flex items-center justify-center py-16 text-muted-foreground gap-2">
             <Loader2 className="h-5 w-5 animate-spin" />
@@ -235,29 +237,33 @@ export default function TeamsPage() {
                   <TableCell className="text-muted-foreground">
                     {team.id}
                   </TableCell>
-                  <TableCell className="font-medium">{team.name}</TableCell>
+                  <TableCell className="font-bold text-gray-900">{team.name}</TableCell>
                   <TableCell>
-                    <Badge variant="secondary">
+                    <Badge variant="secondary" className="bg-gradient-to-r from-green-400 to-green-500 text-white border-0 font-bold shadow-md px-3 py-1">
                       {CATEGORY_LABELS[team.category]}
                     </Badge>
                   </TableCell>
-                  <TableCell>{team.coach_name}</TableCell>
+                  <TableCell className="font-medium text-gray-700">{team.coach_name}</TableCell>
                   <TableCell>
                     {team.players && team.players.length > 0 ? (
                       <div className="flex flex-wrap gap-1">
                         {team.players.slice(0, 3).map((player) => (
-                          <Badge key={player.id} variant="outline">
+                          <Badge 
+                            key={player.id} 
+                            variant="outline"
+                            className="bg-gradient-to-r from-blue-400 to-blue-500 text-white border-0 font-semibold shadow-md px-2 py-1"
+                          >
                             {player.name} {player.surname}
                           </Badge>
                         ))}
                         {team.players.length > 3 && (
-                          <Badge variant="outline">
+                          <Badge variant="outline" className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white border-0 font-bold shadow-md px-2 py-1">
                             +{team.players.length - 3}
                           </Badge>
                         )}
                       </div>
                     ) : (
-                      <span className="text-muted-foreground">—</span>
+                      <span className="text-gray-400">—</span>
                     )}
                   </TableCell>
                   <TableCell className="text-right">
@@ -265,7 +271,7 @@ export default function TeamsPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="gap-1"
+                        className="gap-1 border-2 border-green-500 text-green-700 hover:bg-green-500 hover:text-white font-semibold shadow-sm hover:shadow-md transition-all"
                         onClick={() => openEdit(team)}
                       >
                         <Pencil className="h-3 w-3" />
@@ -329,24 +335,24 @@ export default function TeamsPage() {
             {/* Category */}
             <div className="space-y-2">
               <Label>Categoría *</Label>
-              <Select
-                value={form.category}
-                onValueChange={(v) =>
-                  setForm({ ...form, category: v as TeamCategory })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sub_10">Sub-10</SelectItem>
-                  <SelectItem value="sub_12">Sub-12</SelectItem>
-                  <SelectItem value="sub_14">Sub-14</SelectItem>
-                  <SelectItem value="sub_16">Sub-16</SelectItem>
-                  <SelectItem value="sub_18">Sub-18</SelectItem>
-                  <SelectItem value="senior">Senior</SelectItem>
-                </SelectContent>
-              </Select>
+                <Select
+                  value={form.category}
+                  onValueChange={(v) =>
+                    setForm({ ...form, category: v as TeamCategory })
+                  }
+                >
+                  <SelectTrigger className="border-2 border-green-300 focus:ring-green-500 focus:border-green-500">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sub_10">Sub-10</SelectItem>
+                    <SelectItem value="sub_12">Sub-12</SelectItem>
+                    <SelectItem value="sub_14">Sub-14</SelectItem>
+                    <SelectItem value="sub_16">Sub-16</SelectItem>
+                    <SelectItem value="sub_18">Sub-18</SelectItem>
+                    <SelectItem value="senior">Senior</SelectItem>
+                  </SelectContent>
+                </Select>
             </div>
 
             {/* Players */}
@@ -357,7 +363,7 @@ export default function TeamsPage() {
                   value={selectedPlayerId}
                   onValueChange={(value) => setSelectedPlayerId(value || "")}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="border-2 border-green-300 focus:ring-green-500 focus:border-green-500">
                     <SelectValue placeholder="Seleccionar jugador" />
                   </SelectTrigger>
                   <SelectContent>
@@ -379,6 +385,7 @@ export default function TeamsPage() {
                   variant="outline"
                   onClick={addPlayer}
                   disabled={!selectedPlayerId}
+                  className="border-2 border-green-500 text-green-700 hover:bg-green-500 hover:text-white font-bold shadow-sm hover:shadow-md transition-all"
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -391,13 +398,13 @@ export default function TeamsPage() {
                     <Badge
                       key={player.id}
                       variant="secondary"
-                      className="gap-1 pr-1"
+                      className="gap-1 pr-1 bg-gradient-to-r from-blue-400 to-blue-500 text-white border-0 font-semibold shadow-md"
                     >
                       {player.name} {player.surname}
                       <button
                         type="button"
                         onClick={() => removePlayer(player.id)}
-                        className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
+                        className="ml-1 hover:bg-red-500 rounded-full p-0.5 transition-colors"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -409,10 +416,14 @@ export default function TeamsPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setFormOpen(false)}>
+            <Button variant="outline" onClick={() => setFormOpen(false)} className="border-gray-300">
               Cancelar
             </Button>
-            <Button onClick={handleSave} disabled={saving} className="gap-2">
+            <Button 
+              onClick={handleSave} 
+              disabled={saving} 
+              className="gap-2 bg-gradient-to-r from-green-500 via-green-600 to-green-700 hover:from-green-600 hover:via-green-700 hover:to-green-800 text-white font-bold shadow-lg hover:shadow-xl transition-all"
+            >
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               {editingTeam ? "Guardar cambios" : "Crear equipo"}
             </Button>
