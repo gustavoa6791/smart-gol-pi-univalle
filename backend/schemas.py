@@ -118,3 +118,38 @@ class TeamOut(TeamBase):
 class SetLeaderBody(BaseModel):
     """Solo se puede designar un líder por equipo; el jugador debe estar en el equipo."""
     player_id: Optional[int] = None  # null para quitar el líder
+
+# ─── Tournament Template Schemas ────────────────────────────────────────────
+
+class TournamentTemplateBase(BaseModel):
+    name: str
+    is_home_away: Optional[bool] = False
+
+class TournamentTemplateCreate(TournamentTemplateBase):
+    pass
+
+class TournamentTemplateOut(TournamentTemplateBase):
+    id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# ─── Tournament Schemas ────────────────────────────────────────────
+
+class TournamentBase(BaseModel):
+    name: str
+    template_id: int
+
+class TournamentCreate(TournamentBase):
+    pass
+
+class TournamentOut(TournamentBase):
+    id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+        
+class TournamentTeamAssign(BaseModel):
+    team_ids: List[int]
