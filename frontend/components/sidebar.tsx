@@ -12,12 +12,14 @@ import {
   LogOut,
   ChevronFirst,
   ChevronLast,
+  Trophy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/players", label: "Jugadores", icon: Users },
+  { href: "/teams", label: "Equipos", icon: Trophy },
 ];
 
 export function Sidebar() {
@@ -40,19 +42,19 @@ export function Sidebar() {
       )}
     >
       {/* Logo */}
-      <div className="flex items-center gap-3 px-4 py-4 min-h-[60px] border-b border-border">
-        <span className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground text-base">
+      <div className="flex items-center gap-4 px-6 h-[60px] border-b-2 border-green-200 bg-gradient-to-r from-green-50 via-white to-green-50">
+        <span className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 via-green-600 to-green-700 flex items-center justify-center text-white text-xl shadow-lg hover:shadow-xl transition-shadow leading-none">
           ⚽
         </span>
         {!collapsed && (
-          <span className="font-semibold text-sm tracking-tight whitespace-nowrap overflow-hidden">
+          <span className="font-bold text-lg tracking-tight whitespace-nowrap overflow-hidden text-gray-900 leading-tight">
             Smart Gol
           </span>
         )}
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-3 px-2 flex flex-col gap-1">
+      <nav className="flex-1 py-4 px-3 flex flex-col gap-2">
         {navItems.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + "/");
           return (
@@ -61,8 +63,10 @@ export function Sidebar() {
               href={href}
               title={collapsed ? label : undefined}
               className={cn(
-                "flex items-center gap-3 rounded-md px-2 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors",
-                active && "bg-accent text-accent-foreground font-medium"
+                "flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-all duration-200",
+                active 
+                  ? "bg-gradient-to-r from-green-500 to-green-600 text-white font-bold shadow-md border-l-4 border-green-700 transform scale-[1.02]" 
+                  : "text-gray-700 hover:bg-green-100 hover:text-green-700 hover:shadow-sm"
               )}
             >
               <Icon className="flex-shrink-0 h-5 w-5" />
@@ -77,12 +81,12 @@ export function Sidebar() {
       <Separator />
 
       {/* Footer */}
-      <div className="py-3 px-2 flex flex-col gap-1">
+      <div className="py-4 px-3 flex flex-col gap-2">
         {/* Logout */}
         <button
           onClick={logout}
           title={collapsed ? "Cerrar sesión" : undefined}
-          className="flex items-center gap-3 w-full rounded-md px-2 py-2.5 text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+          className="flex items-center gap-3 w-full rounded-md px-2 py-2.5 text-sm text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors font-medium"
         >
           <LogOut className="flex-shrink-0 h-5 w-5" />
           {!collapsed && <span className="whitespace-nowrap">Cerrar sesión</span>}
@@ -94,7 +98,7 @@ export function Sidebar() {
           size="sm"
           onClick={() => setCollapsed(!collapsed)}
           title={collapsed ? "Expandir menú" : "Contraer menú"}
-          className="flex items-center gap-3 justify-start px-2 text-muted-foreground"
+          className="flex items-center gap-3 justify-start px-2 text-gray-600"
         >
           {collapsed ? (
             <ChevronLast className="h-5 w-5 flex-shrink-0" />

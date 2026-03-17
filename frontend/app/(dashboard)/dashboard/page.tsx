@@ -22,49 +22,54 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Bienvenido de vuelta{user ? `, ${user.name}` : ""} 👋
+        <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">
+          Dashboard
+        </h1>
+        <p className="text-muted-foreground text-sm mt-1 font-medium">
+          ⚽ Bienvenido de vuelta{user ? `, ${user.name}` : ""}
         </p>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Card className="border-2 border-green-300 hover:border-green-500 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 bg-gradient-to-br from-white to-green-50">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 bg-gradient-to-r from-green-500 to-green-600 rounded-t-lg">
+            <CardTitle className="text-sm font-bold text-white">
               Total jugadores
             </CardTitle>
-            <span className="text-2xl">⚽</span>
+            <span className="text-3xl">⚽</span>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{playerCount}</p>
+            <p className="text-5xl font-bold bg-gradient-to-r from-green-600 to-green-700 bg-clip-text text-transparent">{playerCount}</p>
+            <p className="text-xs text-gray-600 mt-2 font-medium">Jugadores registrados</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+        <Card className="border-2 border-yellow-300 hover:border-yellow-500 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 bg-gradient-to-br from-white to-yellow-50">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-t-lg">
+            <CardTitle className="text-sm font-bold text-white">
               Equipos activos
             </CardTitle>
-            <span className="text-2xl">🏆</span>
+            <span className="text-3xl">🏆</span>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">1</p>
+            <p className="text-5xl font-bold bg-gradient-to-r from-yellow-600 to-yellow-700 bg-clip-text text-transparent">1</p>
+            <p className="text-xs text-gray-600 mt-2 font-medium">Equipos en el sistema</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+        <Card className="border-2 border-blue-300 hover:border-blue-500 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 bg-gradient-to-br from-white to-blue-50">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 bg-gradient-to-r from-blue-500 to-blue-600 rounded-t-lg">
+            <CardTitle className="text-sm font-bold text-white">
               Convocatorias
             </CardTitle>
-            <span className="text-2xl">📋</span>
+            <span className="text-3xl">📋</span>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">0</p>
+            <p className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent">0</p>
+            <p className="text-xs text-gray-600 mt-2 font-medium">Convocatorias activas</p>
           </CardContent>
         </Card>
       </div>

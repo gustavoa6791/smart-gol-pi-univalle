@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Optional, List
 from enum import Enum
 from datetime import datetime, date
 
@@ -71,3 +71,50 @@ class PlayerOut(PlayerBase):
 
     class Config:
         from_attributes = True
+
+
+# ─── Team Schemas ────────────────────────────────────────────────────────────
+
+class TeamCategory(str, Enum):
+    sub_10 = "sub_10"
+    sub_12 = "sub_12"
+    sub_14 = "sub_14"
+    sub_16 = "sub_16"
+    sub_18 = "sub_18"
+    senior = "senior"
+
+
+class TeamBase(BaseModel):
+    name: str
+    category: TeamCategory
+    coach_name: str
+
+
+class TeamCreate(TeamBase):
+    player_ids: Optional[List[int]] = None  # Lista de IDs de jugadores (solo para creación)
+    leader_id: Optional[int] = None  # Líder del equipo (debe estar en player_ids)
+
+
+class TeamUpdate(BaseModel):
+    name: Optional[str] = None
+    category: Optional[TeamCategory] = None
+    coach_name: Optional[str] = None
+    player_ids: Optional[List[int]] = None
+    leader_id: Optional[int] = None  # Líder del equipo (debe ser miembro del equipo)
+
+
+class TeamOut(TeamBase):
+    id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    players: Optional[List[PlayerOut]] = None  # Lista completa de jugadores (no player_ids)
+    leader_id: Optional[int] = None
+    leader: Optional[PlayerOut] = None  # Datos del jugador líder (capitán/contacto)
+
+    class Config:
+        from_attributes = True
+
+
+class SetLeaderBody(BaseModel):
+    """Solo se puede designar un líder por equipo; el jugador debe estar en el equipo."""
+    player_id: Optional[int] = None  # null para quitar el líder

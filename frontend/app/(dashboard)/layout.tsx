@@ -10,16 +10,17 @@ export default function DashboardLayout({
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top navbar */}
-        <header className="h-[60px] border-b border-border bg-card flex items-center justify-between px-6 flex-shrink-0">
-          <p className="text-sm text-muted-foreground font-medium">
-            Sistema de gestión de equipo
+        <header className="h-[60px] border-b-2 border-green-200 bg-gradient-to-r from-white via-green-50 to-white flex items-center justify-between px-8 flex-shrink-0 shadow-md">
+          <p className="text-sm text-gray-800 font-bold flex items-center gap-2 leading-none">
+            <span className="text-green-600 text-base">⚽</span>
+            <span className="leading-tight">Sistema de gestión de equipos</span>
           </p>
-          <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 via-green-600 to-green-700 text-white flex items-center justify-center text-xs font-bold shadow-lg hover:shadow-xl transition-shadow cursor-pointer leading-none">
             SG
           </div>
         </header>
         {/* Page */}
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-8">{children}</main>
       </div>
     </div>
   );
