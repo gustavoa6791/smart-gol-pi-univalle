@@ -73,12 +73,20 @@ export default function TeamsPage() {
   const [form, setForm] = useState<TeamCreate>(emptyForm);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>("");
 
-  function loadTeams() {
-    setLoading(true);
+  function loadTeams(silent = false) {
+    if (!silent) setLoading(true);
     api.get<Team[]>("/api/teams/")
-      .then((r) => setTeams(r.data))
-      .catch(() => toast.error("Error al cargar equipos"))
-      .finally(() => setLoading(false));
+      .then((r) => {
+        console.log("Equipos cargados:", r.data.length, r.data);
+        setTeams(r.data);
+      })
+      .catch((err) => {
+        console.error("Error al cargar equipos:", err);
+        if (!silent) toast.error("Error al cargar equipos");
+      })
+      .finally(() => {
+        if (!silent) setLoading(false);
+      });
   }
 
   function loadPlayers() {
@@ -90,6 +98,11 @@ export default function TeamsPage() {
   useEffect(() => {
     loadTeams();
     loadPlayers();
+    // Auto-refresh cada 3 segundos para ver cambios de otros usuarios (sin mostrar loading)
+    const interval = setInterval(() => {
+      loadTeams(true); // silent = true para no mostrar loading en el refresh automático
+    }, 3000);
+    return () => clearInterval(interval);
   }, []);
 
   function openCreate() {
@@ -156,16 +169,22 @@ export default function TeamsPage() {
       leader_id: form.leader_id && form.player_ids?.includes(form.leader_id) ? form.leader_id : undefined,
     };
     try {
+      console.log("Enviando payload:", payload);
+      let response;
       if (editingTeam) {
-        await api.put(`/api/teams/${editingTeam.id}`, payload);
+        response = await api.put(`/api/teams/${editingTeam.id}`, payload);
+        console.log("Equipo actualizado:", response.data);
         toast.success("Equipo actualizado");
       } else {
-        await api.post("/api/teams/", payload);
+        response = await api.post("/api/teams/", payload);
+        console.log("Equipo creado:", response.data);
         toast.success("Equipo creado");
       }
       setFormOpen(false);
       loadTeams();
     } catch (err: any) {
+      console.error("Error al guardar equipo:", err);
+      console.error("Error response:", err?.response);
       const errorMsg = err?.response?.data?.detail || "Error al guardar";
       toast.error(errorMsg);
     } finally {

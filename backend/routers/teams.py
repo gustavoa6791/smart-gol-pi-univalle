@@ -9,7 +9,11 @@ router = APIRouter(prefix="/api/teams", tags=["teams"])
 
 
 def _teams_query(db: Session):
-    return db.query(models.Team).options(selectinload(models.Team.leader))
+    # Cargar tanto los jugadores como el líder para evitar consultas N+1
+    return db.query(models.Team).options(
+        selectinload(models.Team.players),
+        selectinload(models.Team.leader)
+    )
 
 
 @router.get("/", response_model=List[schemas.TeamOut])
@@ -17,9 +21,12 @@ def list_teams(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    _: models.User = Depends(auth_utils.get_current_user),
+    current_user: models.User = Depends(auth_utils.get_current_user),
 ):
-    return _teams_query(db).offset(skip).limit(limit).all()
+    # Devolver TODOS los equipos sin filtrar por usuario
+    teams = _teams_query(db).offset(skip).limit(limit).all()
+    print(f"[DEBUG] Usuario {current_user.id} ({current_user.email}) - Equipos encontrados: {len(teams)}")
+    return teams
 
 
 @router.post("/", response_model=schemas.TeamOut, status_code=status.HTTP_201_CREATED)
@@ -62,10 +69,26 @@ def create_team(
             )
         team.leader_id = team_data.leader_id
 
-    db.add(team)
-    db.commit()
-    db.refresh(team)
-    return team
+    try:
+        print(f"[DEBUG CREATE] Usuario {current_user.id} ({current_user.email}) creando equipo: {team_data.name}")
+        db.add(team)
+        db.commit()
+        db.refresh(team)
+        print(f"[DEBUG CREATE] Equipo creado exitosamente: ID {team.id}, Nombre: {team.name}")
+        
+        # Recargar el equipo con los jugadores y el líder para devolverlos en la respuesta
+        team = _teams_query(db).filter(models.Team.id == team.id).first()
+        print(f"[DEBUG CREATE] Equipo recargado: ID {team.id}, Jugadores: {len(team.players) if team.players else 0}")
+        return team
+    except Exception as e:
+        db.rollback()
+        print(f"[DEBUG CREATE] ERROR al crear equipo: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al crear el equipo: {str(e)}",
+        )
 
 
 @router.get("/{team_id}", response_model=schemas.TeamOut)
@@ -103,6 +126,8 @@ def set_team_leader(
         team.leader_id = body.player_id
     db.commit()
     db.refresh(team)
+    # Recargar el equipo con los jugadores y el líder para devolverlos en la respuesta
+    team = _teams_query(db).filter(models.Team.id == team_id).first()
     return team
 
 
@@ -158,6 +183,8 @@ def update_team(
 
     db.commit()
     db.refresh(team)
+    # Recargar el equipo con los jugadores y el líder para devolverlos en la respuesta
+    team = _teams_query(db).filter(models.Team.id == team_id).first()
     return team
 
 

@@ -88,10 +88,10 @@ class TeamBase(BaseModel):
     name: str
     category: TeamCategory
     coach_name: str
-    player_ids: Optional[List[int]] = None  # Lista de IDs de jugadores
 
 
 class TeamCreate(TeamBase):
+    player_ids: Optional[List[int]] = None  # Lista de IDs de jugadores (solo para creación)
     leader_id: Optional[int] = None  # Líder del equipo (debe estar en player_ids)
 
 
@@ -107,7 +107,7 @@ class TeamOut(TeamBase):
     id: int
     created_at: datetime
     updated_at: Optional[datetime] = None
-    players: Optional[List[PlayerOut]] = None
+    players: Optional[List[PlayerOut]] = None  # Lista completa de jugadores (no player_ids)
     leader_id: Optional[int] = None
     leader: Optional[PlayerOut] = None  # Datos del jugador líder (capitán/contacto)
 
