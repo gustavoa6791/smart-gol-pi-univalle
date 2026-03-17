@@ -169,23 +169,24 @@ export default function TeamsPage() {
       leader_id: form.leader_id && form.player_ids?.includes(form.leader_id) ? form.leader_id : undefined,
     };
     try {
-      console.log("Enviando payload:", payload);
-      let response;
       if (editingTeam) {
-        response = await api.put(`/api/teams/${editingTeam.id}`, payload);
-        console.log("Equipo actualizado:", response.data);
+        const response = await api.put<Team>(`/api/teams/${editingTeam.id}`, payload);
         toast.success("Equipo actualizado");
+        setTeams((prev) =>
+          prev.map((t) => (t.id === editingTeam.id ? response.data : t))
+        );
       } else {
-        response = await api.post("/api/teams/", payload);
-        console.log("Equipo creado:", response.data);
+        const response = await api.post<Team>("/api/teams/", payload);
         toast.success("Equipo creado");
+        setTeams((prev) => [...prev, response.data]);
       }
       setFormOpen(false);
-      loadTeams();
+      loadTeams(true);
     } catch (err: any) {
-      console.error("Error al guardar equipo:", err);
-      console.error("Error response:", err?.response);
-      const errorMsg = err?.response?.data?.detail || "Error al guardar";
+      const errorMsg =
+        err?.response?.data?.detail ||
+        err?.message ||
+        "Error al guardar. Revisa que el backend esté en http://localhost:8000.";
       toast.error(errorMsg);
     } finally {
       setSaving(false);
