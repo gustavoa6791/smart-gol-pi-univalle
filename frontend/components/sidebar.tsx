@@ -13,6 +13,7 @@ import {
   ChevronFirst,
   ChevronLast,
   Trophy,
+  CalendarDays,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,8 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/players", label: "Jugadores", icon: Users },
   { href: "/teams", label: "Equipos", icon: Trophy },
+  { href: "/tournaments/templates", label: "Plantillas", icon: CalendarDays },
+  { href: "/tournaments/manage", label: "Torneos", icon: Trophy },
 ];
 
 export function Sidebar() {
