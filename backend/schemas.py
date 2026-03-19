@@ -153,3 +153,13 @@ class TournamentOut(TournamentBase):
         
 class TournamentTeamAssign(BaseModel):
     team_ids: List[int]
+
+class MatchOut(BaseModel):
+    id: int
+    round: int
+
+    home_team: TeamOut
+    away_team: TeamOut
+
+    class Config:
+        from_attributes = True

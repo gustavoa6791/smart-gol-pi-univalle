@@ -152,3 +152,11 @@ def generate_tournament_fixture(tournament_id: int, db: Session = Depends(get_db
         "total_matches": len(matches_created),
         "rounds": len(rounds)
     }
+
+@router.get("/{tournament_id}/matches", response_model=List[schemas.MatchOut])
+def get_matches(tournament_id: int, db: Session = Depends(get_db)):
+    matches = db.query(models.Match).filter(
+        models.Match.tournament_id == tournament_id
+    ).order_by(models.Match.round).all()
+
+    return matches
