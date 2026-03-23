@@ -33,39 +33,141 @@ def seed_data():
         if db.query(models.Player).count() == 0:
             print("🌱 Seeding initial players...")
             players = [
-                models.Player(
-                    name="Lionel",
-                    surname="Messi",
-                    number=10,
-                    position=models.PlayerPosition.forward,
-                    nationality="Argentino",
-                    birth_date=date(1987, 6, 24),
-                    notes="El mejor de la historia"
-                ),
-                models.Player(
-                    name="Cristiano",
-                    surname="Ronaldo",
-                    number=7,
-                    position=models.PlayerPosition.forward,
-                    nationality="Portugués",
-                    birth_date=date(1985, 2, 5),
-                    notes="Siuuuuu"
-                ),
-                models.Player(
-                    name="Emiliano",
-                    surname="Martínez",
-                    number=23,
-                    position=models.PlayerPosition.goalkeeper,
-                    nationality="Argentino",
-                    birth_date=date(1992, 9, 2),
-                    notes="Dibu"
-                )
+                # Originales
+                models.Player(name="Lionel", surname="Messi", number=10,
+                            position=models.PlayerPosition.forward,
+                            nationality="Argentina", birth_date=date(1987, 6, 24)),
+                
+                models.Player(name="Cristiano", surname="Ronaldo", number=7,
+                            position=models.PlayerPosition.forward,
+                            nationality="Portugal", birth_date=date(1985, 2, 5)),
+                
+                models.Player(name="Neymar", surname="Junior", number=11,
+                            position=models.PlayerPosition.forward,
+                            nationality="Brasil", birth_date=date(1992, 2, 5)),
+                
+                models.Player(name="Kevin", surname="De Bruyne", number=17,
+                            position=models.PlayerPosition.midfielder,
+                            nationality="Bélgica", birth_date=date(1991, 6, 28)),
+                
+                models.Player(name="Virgil", surname="van Dijk", number=4,
+                            position=models.PlayerPosition.defender,
+                            nationality="Holanda", birth_date=date(1991, 7, 8)),
+                
+                models.Player(name="Emiliano", surname="Martínez", number=23,
+                            position=models.PlayerPosition.goalkeeper,
+                            nationality="Argentina", birth_date=date(1992, 9, 2)),
+                
+                # Nuevos jugadores
+                models.Player(name="Kylian", surname="Mbappé", number=9,
+                            position=models.PlayerPosition.forward,
+                            nationality="Francia", birth_date=date(1998, 12, 20)),
+                
+                models.Player(name="Erling", surname="Haaland", number=9,
+                            position=models.PlayerPosition.forward,
+                            nationality="Noruega", birth_date=date(2000, 7, 21)),
+                
+                models.Player(name="Luka", surname="Modrić", number=10,
+                            position=models.PlayerPosition.midfielder,
+                            nationality="Croacia", birth_date=date(1985, 9, 9)),
+                
+                models.Player(name="Jude", surname="Bellingham", number=5,
+                            position=models.PlayerPosition.midfielder,
+                            nationality="Inglaterra", birth_date=date(2003, 6, 29)),
+                
+                models.Player(name="Rodri", surname="Hernández", number=16,
+                            position=models.PlayerPosition.midfielder,
+                            nationality="España", birth_date=date(1996, 6, 22)),
+                
+                models.Player(name="Antoine", surname="Griezmann", number=7,
+                            position=models.PlayerPosition.forward,
+                            nationality="Francia", birth_date=date(1991, 3, 21)),
+                
+                models.Player(name="Robert", surname="Lewandowski", number=9,
+                            position=models.PlayerPosition.forward,
+                            nationality="Polonia", birth_date=date(1988, 8, 21)),
+                
+                models.Player(name="Mohamed", surname="Salah", number=11,
+                            position=models.PlayerPosition.forward,
+                            nationality="Egipto", birth_date=date(1992, 6, 15)),
+                
+                models.Player(name="Vinícius", surname="Júnior", number=20,
+                            position=models.PlayerPosition.forward,
+                            nationality="Brasil", birth_date=date(2000, 7, 12)),
+                
+                models.Player(name="Rúben", surname="Dias", number=3,
+                            position=models.PlayerPosition.defender,
+                            nationality="Portugal", birth_date=date(1997, 5, 14)),
+                
+                models.Player(name="Achraf", surname="Hakimi", number=2,
+                            position=models.PlayerPosition.defender,
+                            nationality="Marruecos", birth_date=date(1998, 11, 4)),
+                
+                models.Player(name="Alisson", surname="Becker", number=1,
+                            position=models.PlayerPosition.goalkeeper,
+                            nationality="Brasil", birth_date=date(1992, 10, 2)),
+                
+                models.Player(name="Thibaut", surname="Courtois", number=1,
+                            position=models.PlayerPosition.goalkeeper,
+                            nationality="Bélgica", birth_date=date(1992, 5, 11)),
+                
+                models.Player(name="Pedri", surname="González", number=8,
+                            position=models.PlayerPosition.midfielder,
+                            nationality="España", birth_date=date(2002, 11, 25)),
             ]
             db.add_all(players)
             db.commit()
             print(f"✅ Created {len(players)} players")
         else:
             print("ℹ️ Players already exist, skipping...")
+
+        # 3. Seed Teams
+        if db.query(models.Team).count() == 0:
+            players = db.query(models.Player).all()
+
+            team1 = models.Team(
+                name="Equipo A",
+                category=models.TeamCategory.senior,
+                coach_name="Carlos Pérez",
+                leader_id=players[0].id
+            )
+
+            team2 = models.Team(
+                name="Equipo B",
+                category=models.TeamCategory.senior,
+                coach_name="Juan Gómez",
+                leader_id=players[1].id
+            )
+
+            # asignar jugadores
+            team1.players = players[:3]
+            team2.players = players[3:]
+
+            db.add_all([team1, team2])
+            db.commit()
+            print("✅ Creating teams...")
+        else:
+            print("ℹ️ Teams already exist")
+        
+        # 4. Seed Tournament Templates
+        if db.query(models.TournamentTemplate).count() == 0:
+
+            templates = [
+                models.TournamentTemplate(
+                    name="Liga simple",
+                    is_home_away=0
+                ),
+                models.TournamentTemplate(
+                    name="Liga ida y vuelta",
+                    is_home_away=1
+                )
+            ]
+
+            db.add_all(templates)
+            db.commit()
+            print("✅ Creating templates...")
+        else:
+            print("ℹ️ Templates already exist")
 
     except Exception as e:
         print(f"❌ Error seeding data: {e}")

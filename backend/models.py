@@ -11,6 +11,12 @@ team_players = Table(
     Column('team_id', Integer, ForeignKey('teams.id'), primary_key=True),
     Column('player_id', Integer, ForeignKey('players.id'), primary_key=True)
 )
+tournament_teams = Table(
+    'tournament_teams',
+    Base.metadata,
+    Column('tournament_id', Integer, ForeignKey('tournaments.id'), primary_key=True),
+    Column('team_id', Integer, ForeignKey('teams.id'), primary_key=True)
+)
 
 
 class PlayerPosition(str, py_enum.Enum):
@@ -73,3 +79,47 @@ class Team(Base):
     # Relación many-to-many con Player
     players = relationship("Player", secondary=team_players, backref="teams")
     leader = relationship("Player", foreign_keys=[leader_id])
+
+class TournamentTemplate(Base):
+    __tablename__ = "tournament_templates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(150), nullable=False)
+    # Por ahora solo soportamos liga
+    type = Column(String(50), default="league")
+    # Configuración simple
+    is_home_away = Column(
+        Integer, default=0
+    )  # 0 = solo ida, 1 = ida y vuelta
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class Tournament(Base):
+    __tablename__ = "tournaments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(150), nullable=False)
+    template_id = Column(Integer, ForeignKey("tournament_templates.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relación
+    template = relationship("TournamentTemplate")
+    teams = relationship("Team", secondary=tournament_teams)
+
+class Match(Base):
+    __tablename__ = "matches"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    tournament_id = Column(Integer, ForeignKey("tournaments.id"), nullable=False)
+
+    home_team_id = Column(Integer, ForeignKey("teams.id"), nullable=False)
+    away_team_id = Column(Integer, ForeignKey("teams.id"), nullable=False)
+
+    round = Column(Integer, nullable=False)  # jornada
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relaciones
+    tournament = relationship("Tournament")
+    home_team = relationship("Team", foreign_keys=[home_team_id])
+    away_team = relationship("Team", foreign_keys=[away_team_id])

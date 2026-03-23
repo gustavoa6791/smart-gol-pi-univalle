@@ -19,10 +19,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from routers import auth, players, teams
+from routers import auth, players, teams, templates, tournaments
 app.include_router(auth.router)
 app.include_router(players.router)
 app.include_router(teams.router)
+app.include_router(templates.router)
+app.include_router(tournaments.router)
 
 
 @app.on_event("startup")

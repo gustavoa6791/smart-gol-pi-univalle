@@ -58,3 +58,27 @@ export interface TeamCreate {
   player_ids?: number[];
   leader_id?: number | null;
 }
+
+export interface TournamentTemplate {
+  id: number;
+  name: string;
+  is_home_away: boolean;
+  created_at: string;
+}
+
+export interface TournamentTemplateCreate {
+  name: string;
+  is_home_away?: boolean;
+}
+
+export interface Tournament {
+  id: number;
+  name: string;
+  template_id: number;
+  created_at: string;
+}
+
+export interface TournamentCreate {
+  name: string;
+  template_id: number;
+}
