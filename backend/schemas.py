@@ -45,14 +45,43 @@ class PlayerPosition(str, Enum):
     forward = "forward"
 
 
+class DocumentType(str, Enum):
+    CC = "CC"
+    TI = "TI"
+    CE = "CE"
+    PA = "PA"
+
+
+class Gender(str, Enum):
+    M = "M"
+    F = "F"
+    O = "O"
+
+
+class PlayerDocumentOut(BaseModel):
+    id: int
+    player_id: int
+    filename: str
+    original_name: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class PlayerBase(BaseModel):
-    name: str
-    surname: Optional[str] = None
-    number: Optional[int] = None
+    first_name: str
+    second_name: Optional[str] = None
+    first_surname: str
+    second_surname: Optional[str] = None
+    document_type: Optional[DocumentType] = None
+    document_number: Optional[str] = None
     position: Optional[PlayerPosition] = None
-    nationality: Optional[str] = None
     birth_date: Optional[date] = None
     phone: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+    gender: Optional[Gender] = None
     notes: Optional[str] = None
 
 
@@ -60,12 +89,26 @@ class PlayerCreate(PlayerBase):
     pass
 
 
-class PlayerUpdate(PlayerBase):
-    name: Optional[str] = None
+class PlayerUpdate(BaseModel):
+    first_name: Optional[str] = None
+    second_name: Optional[str] = None
+    first_surname: Optional[str] = None
+    second_surname: Optional[str] = None
+    document_type: Optional[DocumentType] = None
+    document_number: Optional[str] = None
+    position: Optional[PlayerPosition] = None
+    birth_date: Optional[date] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+    gender: Optional[Gender] = None
+    notes: Optional[str] = None
 
 
 class PlayerOut(PlayerBase):
     id: int
+    photo_url: Optional[str] = None
+    documents: Optional[List[PlayerDocumentOut]] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 

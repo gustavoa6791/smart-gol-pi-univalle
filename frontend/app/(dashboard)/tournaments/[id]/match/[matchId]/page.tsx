@@ -11,9 +11,10 @@ import { toast } from "sonner";
 
 interface Player {
   id: number;
-  name: string;
-  surname: string | null;
-  number: number | null;
+  first_name: string;
+  second_name?: string | null;
+  first_surname: string;
+  second_surname?: string | null;
   position: string | null;
 }
 
@@ -158,13 +159,8 @@ export default function MatchDetailPage() {
         className="flex items-center justify-between py-2 px-3 border-b last:border-b-0"
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          {player.number !== null && (
-            <span className="text-xs font-bold bg-muted rounded-full w-7 h-7 flex items-center justify-center shrink-0">
-              {player.number}
-            </span>
-          )}
           <span className="font-medium truncate">
-            {player.name} {player.surname || ""}
+            {player.first_name} {player.first_surname}
           </span>
           {player.position && (
             <Badge variant="outline" className="text-xs shrink-0">

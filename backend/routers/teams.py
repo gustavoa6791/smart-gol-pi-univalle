@@ -188,5 +188,12 @@ def delete_team(
     team = db.query(models.Team).filter(models.Team.id == team_id).first()
     if not team:
         raise HTTPException(status_code=404, detail="Team not found")
+    # Eliminar stats y partidos donde participa el equipo antes de eliminar
+    matches = db.query(models.Match).filter(
+        (models.Match.home_team_id == team_id) | (models.Match.away_team_id == team_id)
+    ).all()
+    for match in matches:
+        db.query(models.MatchPlayerStat).filter(models.MatchPlayerStat.match_id == match.id).delete()
+        db.delete(match)
     db.delete(team)
     db.commit()
