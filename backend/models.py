@@ -26,6 +26,19 @@ class PlayerPosition(str, py_enum.Enum):
     forward = "forward"
 
 
+class DocumentType(str, py_enum.Enum):
+    CC = "CC"       # Cédula de Ciudadanía
+    TI = "TI"       # Tarjeta de Identidad
+    CE = "CE"       # Cédula de Extranjería
+    PA = "PA"       # Pasaporte
+
+
+class Gender(str, py_enum.Enum):
+    M = "M"   # Masculino
+    F = "F"   # Femenino
+    O = "O"   # Otro
+
+
 class TeamCategory(str, py_enum.Enum):
     sub_10 = "sub_10"
     sub_12 = "sub_12"
@@ -50,16 +63,36 @@ class Player(Base):
     __tablename__ = "players"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(150), nullable=False)
-    surname = Column(String(150), nullable=True)
-    number = Column(Integer, nullable=True)
+    first_name = Column(String(150), nullable=False)
+    second_name = Column(String(150), nullable=True)
+    first_surname = Column(String(150), nullable=False)
+    second_surname = Column(String(150), nullable=True)
+    document_type = Column(Enum(DocumentType), nullable=True)
+    document_number = Column(String(50), nullable=True)
     position = Column(Enum(PlayerPosition), nullable=True)
-    nationality = Column(String(100), nullable=True)
     birth_date = Column(Date, nullable=True)
     phone = Column(String(20), nullable=True)
+    email = Column(String(150), nullable=True)
+    address = Column(String(300), nullable=True)
+    gender = Column(Enum(Gender), nullable=True)
+    photo_url = Column(String(500), nullable=True)
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    documents = relationship("PlayerDocument", back_populates="player", cascade="all, delete-orphan")
+
+
+class PlayerDocument(Base):
+    __tablename__ = "player_documents"
+
+    id = Column(Integer, primary_key=True, index=True)
+    player_id = Column(Integer, ForeignKey("players.id"), nullable=False)
+    filename = Column(String(500), nullable=False)
+    original_name = Column(String(255), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    player = relationship("Player", back_populates="documents")
 
 
 class Team(Base):

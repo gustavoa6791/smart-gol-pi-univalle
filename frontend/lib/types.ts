@@ -11,29 +11,51 @@ export interface TokenResponse {
 }
 
 export type PlayerPosition = 'goalkeeper' | 'defender' | 'midfielder' | 'forward';
+export type DocumentType = 'CC' | 'TI' | 'CE' | 'PA';
+export type Gender = 'M' | 'F' | 'O';
+
+export interface PlayerDocument {
+  id: number;
+  player_id: number;
+  filename: string;
+  original_name: string;
+  created_at: string;
+}
 
 export interface Player {
   id: number;
-  name: string;
-  surname?: string;
-  number?: number;
+  first_name: string;
+  second_name?: string;
+  first_surname: string;
+  second_surname?: string;
+  document_type?: DocumentType;
+  document_number?: string;
   position?: PlayerPosition;
-  nationality?: string;
-  birth_date?: string;   // ISO format: YYYY-MM-DD
+  birth_date?: string;
   phone?: string;
+  email?: string;
+  address?: string;
+  gender?: Gender;
+  photo_url?: string;
   notes?: string;
+  documents?: PlayerDocument[];
   created_at: string;
   updated_at?: string;
 }
 
 export interface PlayerCreate {
-  name: string;
-  surname?: string;
-  number?: number;
+  first_name: string;
+  second_name?: string;
+  first_surname: string;
+  second_surname?: string;
+  document_type?: DocumentType;
+  document_number?: string;
   position?: PlayerPosition;
-  nationality?: string;
   birth_date?: string;
   phone?: string;
+  email?: string;
+  address?: string;
+  gender?: Gender;
   notes?: string;
 }
 

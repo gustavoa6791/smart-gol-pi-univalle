@@ -65,7 +65,7 @@
   --accent-foreground: oklch(0.1 0 0); /* Negro */
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.88 0.01 120);
-  --input: oklch(0.98 0.005 120);
+  --input: oklch(0.80 0.005 120);
   --ring: oklch(0.55 0.22 150); /* Verde vibrante */
   --chart-1: oklch(0.55 0.22 150);
   --chart-2: oklch(0.85 0.15 85);
@@ -119,6 +119,10 @@
 }
 
 @layer base {
+  input::placeholder,
+  textarea::placeholder {
+    color: oklch(80% 0 13) !important;
+  }
   * {
     @apply border-border outline-ring/50;
   }
@@ -128,4 +132,8 @@
   html {
     @apply font-sans;
   }
+  select, textarea {
+    border-color: var(--input);
+  }
+
 }

@@ -1,5 +1,7 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import time
 import models
 from database import engine
@@ -25,6 +27,11 @@ app.include_router(players.router)
 app.include_router(teams.router)
 app.include_router(templates.router)
 app.include_router(tournaments.router)
+
+# Servir archivos subidos como estáticos
+UPLOAD_DIR = "/app/uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 
 @app.on_event("startup")
