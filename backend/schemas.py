@@ -154,12 +154,76 @@ class TournamentOut(TournamentBase):
 class TournamentTeamAssign(BaseModel):
     team_ids: List[int]
 
+class MatchStatus(str, Enum):
+    pending = "pending"
+    played = "played"
+
+
 class MatchOut(BaseModel):
     id: int
     round: int
+    home_score: Optional[int] = None
+    away_score: Optional[int] = None
+    status: MatchStatus = MatchStatus.pending
 
     home_team: TeamOut
     away_team: TeamOut
 
     class Config:
         from_attributes = True
+
+
+class MatchUpdateScore(BaseModel):
+    home_score: int
+    away_score: int
+
+
+# ─── Match Player Stats Schemas ──────────────────────────────────────────
+
+class MatchPlayerStatBase(BaseModel):
+    player_id: int
+    team_id: int
+    goals: int = 0
+    yellow_cards: int = 0
+    red_cards: int = 0
+
+
+class MatchPlayerStatOut(MatchPlayerStatBase):
+    id: int
+    player: PlayerOut
+
+    class Config:
+        from_attributes = True
+
+
+class MatchDetailOut(BaseModel):
+    id: int
+    round: int
+    home_score: Optional[int] = None
+    away_score: Optional[int] = None
+    status: MatchStatus = MatchStatus.pending
+    home_team: TeamOut
+    away_team: TeamOut
+    player_stats: List[MatchPlayerStatOut] = []
+
+    class Config:
+        from_attributes = True
+
+
+class SaveMatchStats(BaseModel):
+    stats: List[MatchPlayerStatBase]
+
+
+# ─── Standings Schemas ───────────────────────────────────────────────────
+
+class StandingRow(BaseModel):
+    team_id: int
+    team_name: str
+    played: int = 0
+    won: int = 0
+    drawn: int = 0
+    lost: int = 0
+    goals_for: int = 0
+    goals_against: int = 0
+    goal_difference: int = 0
+    points: int = 0

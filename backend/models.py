@@ -105,6 +105,11 @@ class Tournament(Base):
     template = relationship("TournamentTemplate")
     teams = relationship("Team", secondary=tournament_teams)
 
+class MatchStatus(str, py_enum.Enum):
+    pending = "pending"
+    played = "played"
+
+
 class Match(Base):
     __tablename__ = "matches"
 
@@ -117,9 +122,33 @@ class Match(Base):
 
     round = Column(Integer, nullable=False)  # jornada
 
+    home_score = Column(Integer, nullable=True)
+    away_score = Column(Integer, nullable=True)
+    status = Column(Enum(MatchStatus), default=MatchStatus.pending, nullable=False)
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relaciones
     tournament = relationship("Tournament")
     home_team = relationship("Team", foreign_keys=[home_team_id])
     away_team = relationship("Team", foreign_keys=[away_team_id])
+    player_stats = relationship("MatchPlayerStat", back_populates="match", cascade="all, delete-orphan")
+
+
+class MatchPlayerStat(Base):
+    __tablename__ = "match_player_stats"
+    __table_args__ = (
+        UniqueConstraint('match_id', 'player_id', name='uq_match_player'),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    match_id = Column(Integer, ForeignKey("matches.id"), nullable=False)
+    player_id = Column(Integer, ForeignKey("players.id"), nullable=False)
+    team_id = Column(Integer, ForeignKey("teams.id"), nullable=False)
+    goals = Column(Integer, default=0, nullable=False)
+    yellow_cards = Column(Integer, default=0, nullable=False)
+    red_cards = Column(Integer, default=0, nullable=False)
+
+    match = relationship("Match", back_populates="player_stats")
+    player = relationship("Player")
+    team = relationship("Team")

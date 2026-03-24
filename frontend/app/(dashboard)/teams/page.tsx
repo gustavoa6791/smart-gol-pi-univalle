@@ -98,11 +98,6 @@ export default function TeamsPage() {
   useEffect(() => {
     loadTeams();
     loadPlayers();
-    // Auto-refresh cada 3 segundos para ver cambios de otros usuarios (sin mostrar loading)
-    const interval = setInterval(() => {
-      loadTeams(true); // silent = true para no mostrar loading en el refresh automático
-    }, 3000);
-    return () => clearInterval(interval);
   }, []);
 
   function openCreate() {

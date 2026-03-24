@@ -10,15 +10,19 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import api from "@/lib/api";
-import { User, Player } from "@/lib/types";
+import { User, Player, Team, Tournament } from "@/lib/types";
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [playerCount, setPlayerCount] = useState(0);
+  const [teamCount, setTeamCount] = useState(0);
+  const [tournamentCount, setTournamentCount] = useState(0);
 
   useEffect(() => {
     api.get<User>("/api/auth/me").then((r) => setUser(r.data)).catch(() => {});
     api.get<Player[]>("/api/players/").then((r) => setPlayerCount(r.data.length)).catch(() => {});
+    api.get<Team[]>("/api/teams/").then((r) => setTeamCount(r.data.length)).catch(() => {});
+    api.get<Tournament[]>("/api/tournaments/").then((r) => setTournamentCount(r.data.length)).catch(() => {});
   }, []);
 
   return (
@@ -55,7 +59,7 @@ export default function DashboardPage() {
             <span className="text-3xl">🏆</span>
           </CardHeader>
           <CardContent>
-            <p className="text-5xl font-bold bg-gradient-to-r from-yellow-600 to-yellow-700 bg-clip-text text-transparent">1</p>
+            <p className="text-5xl font-bold bg-gradient-to-r from-yellow-600 to-yellow-700 bg-clip-text text-transparent">{teamCount}</p>
             <p className="text-xs text-gray-600 mt-2 font-medium">Equipos en el sistema</p>
           </CardContent>
         </Card>
@@ -63,13 +67,13 @@ export default function DashboardPage() {
         <Card className="border-2 border-blue-300 hover:border-blue-500 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 bg-gradient-to-br from-white to-blue-50">
           <CardHeader className="flex flex-row items-center justify-between pb-2 bg-gradient-to-r from-blue-500 to-blue-600 rounded-t-lg">
             <CardTitle className="text-sm font-bold text-white">
-              Convocatorias
+              Torneos activos
             </CardTitle>
             <span className="text-3xl">📋</span>
           </CardHeader>
           <CardContent>
-            <p className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent">0</p>
-            <p className="text-xs text-gray-600 mt-2 font-medium">Convocatorias activas</p>
+            <p className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent">{tournamentCount}</p>
+            <p className="text-xs text-gray-600 mt-2 font-medium">Torneos en el sistema</p>
           </CardContent>
         </Card>
       </div>
