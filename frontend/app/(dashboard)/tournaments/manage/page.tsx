@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, Trash2 } from "lucide-react";
 import api from "@/lib/api";
 
 import {
@@ -54,6 +54,8 @@ export default function TournamentManagePage() {
   const [selectedTournament, setSelectedTournament] = useState<number | null>(null);
   const [selectedTeams, setSelectedTeams] = useState<number[]>([]);
 
+  const [fixtureMap, setFixtureMap] = useState<Record<number, boolean>>({});
+
   const [form, setForm] = useState<TournamentCreate>({
     name: "",
     template_id: 0,
@@ -67,10 +69,24 @@ export default function TournamentManagePage() {
       api.get<TournamentTemplate[]>("/api/templates/"),
       api.get<Team[]>("/api/teams/"),
     ])
-      .then(([t, temp, team]) => {
+      .then(async ([t, temp, team]) => {
         setTournaments(t.data);
         setTemplates(temp.data);
         setTeams(team.data);
+
+        // Verificar qué torneos ya tienen fixture
+        const map: Record<number, boolean> = {};
+        await Promise.all(
+          t.data.map(async (tour: Tournament) => {
+            try {
+              const res = await api.get(`/api/tournaments/${tour.id}/matches`);
+              map[tour.id] = res.data.length > 0;
+            } catch {
+              map[tour.id] = false;
+            }
+          })
+        );
+        setFixtureMap(map);
       })
       .catch(() => toast.error("Error cargando datos"))
       .finally(() => setLoading(false));
@@ -119,10 +135,22 @@ export default function TournamentManagePage() {
     }
   }
 
+  async function deleteTournament(id: number) {
+    if (!confirm("¿Estás seguro de eliminar este torneo?")) return;
+    try {
+      await api.delete(`/api/tournaments/${id}`);
+      toast.success("Torneo eliminado");
+      loadData();
+    } catch {
+      toast.error("Error al eliminar torneo");
+    }
+  }
+
   async function generateFixture(id: number) {
     try {
       const res = await api.post(`/api/tournaments/${id}/generate-fixture`);
       toast.success(`Fixture generado (${res.data.total_matches} partidos)`);
+      setFixtureMap((prev) => ({ ...prev, [id]: true }));
     } catch {
       toast.error("Error generando fixture");
     }
@@ -156,6 +184,7 @@ export default function TournamentManagePage() {
                 <TableHead>Nombre</TableHead>
                 <TableHead>Plantilla</TableHead>
                 <TableHead>Acciones</TableHead>
+                <TableHead></TableHead>
               </TableRow>
             </TableHeader>
 
@@ -173,21 +202,43 @@ export default function TournamentManagePage() {
                         Asignar equipos
                     </Button>
 
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => generateFixture(t.id)}
-                    >
-                        Generar fixture
-                    </Button>
+                    {!fixtureMap[t.id] && (
+                      <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => generateFixture(t.id)}
+                      >
+                          Generar fixture
+                      </Button>
+                    )}
 
-                    <Button
+                    {fixtureMap[t.id] && (
+                      <>
+                        <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => router.push(`/tournaments/${t.id}/fixture`)}
+                        >
+                            Ver fixture
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => router.push(`/tournaments/${t.id}/standings`)}
+                        >
+                            Ver posiciones
+                        </Button>
+                      </>
+                    )}
+                    </TableCell>
+                    <TableCell>
+                      <Button
                         size="sm"
-                        variant="secondary"
-                        onClick={() => router.push(`/tournaments/${t.id}/fixture`)}
-                    >
-                        Ver fixture
-                    </Button>
+                        variant="destructive"
+                        onClick={() => deleteTournament(t.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </TableCell>
                 </TableRow>
               ))}
