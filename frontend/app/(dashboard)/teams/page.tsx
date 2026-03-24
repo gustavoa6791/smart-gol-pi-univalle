@@ -289,7 +289,7 @@ export default function TeamsPage() {
                             variant="outline"
                             className="bg-gradient-to-r from-blue-400 to-blue-500 text-white border-0 font-semibold shadow-md px-2 py-1"
                           >
-                            {player.name} {player.surname}
+                            {player.first_name} {player.first_surname}
                           </Badge>
                         ))}
                         {team.players.length > 3 && (
@@ -410,7 +410,7 @@ export default function TeamsPage() {
                     ) : (
                       availablePlayers.map((player) => (
                         <SelectItem key={player.id} value={player.id.toString()}>
-                          {player.name} {player.surname} {player.number && `#${player.number}`}
+                          {player.first_name} {player.first_surname}
                         </SelectItem>
                       ))
                     )}
@@ -436,7 +436,7 @@ export default function TeamsPage() {
                       variant="secondary"
                       className="gap-1 pr-1 bg-gradient-to-r from-blue-400 to-blue-500 text-white border-0 font-semibold shadow-md"
                     >
-                      {player.name} {player.surname}
+                      {player.first_name} {player.first_surname}
                       <button
                         type="button"
                         onClick={() => removePlayer(player.id)}
@@ -473,8 +473,7 @@ export default function TeamsPage() {
                     <SelectItem value="none">Ninguno</SelectItem>
                     {selectedPlayers.map((player) => (
                       <SelectItem key={player.id} value={player.id.toString()}>
-                        {player.name} {player.surname}
-                        {player.number != null && ` #${player.number}`}
+                        {player.first_name} {player.first_surname}
                       </SelectItem>
                     ))}
                   </SelectContent>

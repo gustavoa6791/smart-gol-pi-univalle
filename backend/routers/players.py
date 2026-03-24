@@ -88,6 +88,9 @@ def delete_player(
     player = db.query(models.Player).filter(models.Player.id == player_id).first()
     if not player:
         raise HTTPException(status_code=404, detail="Player not found")
+    # Limpiar referencias antes de eliminar
+    db.query(models.Team).filter(models.Team.leader_id == player_id).update({"leader_id": None})
+    db.query(models.MatchPlayerStat).filter(models.MatchPlayerStat.player_id == player_id).delete()
     db.delete(player)
     db.commit()
 
