@@ -168,15 +168,39 @@ class SetLeaderBody(BaseModel):
 
 # ─── Tournament Template Schemas ────────────────────────────────────────────
 
-class TournamentTemplateBase(BaseModel):
+class TournamentType(str, Enum):
+    round_robin = "round_robin"
+    knockout = "knockout"
+    mixed = "mixed"
+
+
+class TournamentTemplateCreate(BaseModel):
     name: str
+    type: TournamentType = TournamentType.round_robin
     is_home_away: Optional[bool] = False
+    points_win: int = 3
+    points_draw: int = 1
+    points_loss: int = 0
+    num_groups: Optional[int] = None
+    teams_advance_per_group: Optional[int] = None
+    third_place_match: Optional[bool] = False
+    final_legs: Optional[int] = 1
+    third_place_legs: Optional[int] = 1
 
-class TournamentTemplateCreate(TournamentTemplateBase):
-    pass
 
-class TournamentTemplateOut(TournamentTemplateBase):
+class TournamentTemplateOut(BaseModel):
     id: int
+    name: str
+    type: TournamentType
+    is_home_away: bool
+    points_win: int
+    points_draw: int
+    points_loss: int
+    num_groups: Optional[int] = None
+    teams_advance_per_group: Optional[int] = None
+    third_place_match: bool
+    final_legs: Optional[int] = 1
+    third_place_legs: Optional[int] = 1
     created_at: datetime
 
     class Config:
@@ -194,12 +218,22 @@ class TournamentCreate(TournamentBase):
 class TournamentOut(TournamentBase):
     id: int
     created_at: datetime
+    template: Optional[TournamentTemplateOut] = None
 
     class Config:
         from_attributes = True
         
 class TournamentTeamAssign(BaseModel):
     team_ids: List[int]
+
+class MatchPhase(str, Enum):
+    group = "group"
+    round_of_16 = "round_of_16"
+    quarterfinal = "quarterfinal"
+    semifinal = "semifinal"
+    third_place = "third_place"
+    final = "final"
+
 
 class MatchStatus(str, Enum):
     pending = "pending"
@@ -209,12 +243,18 @@ class MatchStatus(str, Enum):
 class MatchOut(BaseModel):
     id: int
     round: int
+    leg: Optional[int] = None
+    phase: Optional[MatchPhase] = None
+    group_name: Optional[str] = None
+    bracket_position: Optional[int] = None
+    next_match_id: Optional[int] = None
     home_score: Optional[int] = None
     away_score: Optional[int] = None
+    home_penalty: Optional[int] = None
+    away_penalty: Optional[int] = None
     status: MatchStatus = MatchStatus.pending
-
-    home_team: TeamOut
-    away_team: TeamOut
+    home_team: Optional[TeamOut] = None
+    away_team: Optional[TeamOut] = None
 
     class Config:
         from_attributes = True
@@ -223,6 +263,8 @@ class MatchOut(BaseModel):
 class MatchUpdateScore(BaseModel):
     home_score: int
     away_score: int
+    home_penalty: Optional[int] = None
+    away_penalty: Optional[int] = None
 
 
 # ─── Match Player Stats Schemas ──────────────────────────────────────────
@@ -246,11 +288,16 @@ class MatchPlayerStatOut(MatchPlayerStatBase):
 class MatchDetailOut(BaseModel):
     id: int
     round: int
+    leg: Optional[int] = None
+    phase: Optional[MatchPhase] = None
+    group_name: Optional[str] = None
     home_score: Optional[int] = None
     away_score: Optional[int] = None
+    home_penalty: Optional[int] = None
+    away_penalty: Optional[int] = None
     status: MatchStatus = MatchStatus.pending
-    home_team: TeamOut
-    away_team: TeamOut
+    home_team: Optional[TeamOut] = None
+    away_team: Optional[TeamOut] = None
     player_stats: List[MatchPlayerStatOut] = []
 
     class Config:
@@ -259,6 +306,8 @@ class MatchDetailOut(BaseModel):
 
 class SaveMatchStats(BaseModel):
     stats: List[MatchPlayerStatBase]
+    home_penalty: Optional[int] = None
+    away_penalty: Optional[int] = None
 
 
 # ─── Standings Schemas ───────────────────────────────────────────────────

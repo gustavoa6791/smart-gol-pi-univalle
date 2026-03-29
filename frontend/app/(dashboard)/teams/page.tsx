@@ -34,41 +34,55 @@ export default function TeamsPage() {
   }, []);
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Equipos</h1>
-        <Button onClick={() => router.push("/teams/new")} className="gap-2">
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">
+            Equipos
+          </h1>
+          <p className="text-muted-foreground text-sm font-medium">
+            Gestiona los equipos del club
+          </p>
+        </div>
+        <Button onClick={() => router.push("/teams/new")} className="gap-2 bg-gradient-to-r from-green-500 via-green-600 to-green-700 hover:from-green-600 hover:via-green-700 hover:to-green-800 text-white font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
           <Plus className="h-4 w-4" />
           Nuevo equipo
         </Button>
       </div>
 
-      <Card>
+      {/* Table Card */}
+      <Card className="shadow-xl border-2 border-green-200 bg-white overflow-hidden pt-0 gap-0">
         {loading ? (
-          <CardContent className="py-10 flex justify-center">
-            <Loader2 className="animate-spin h-8 w-8" />
+          <CardContent className="flex items-center justify-center py-16 text-muted-foreground gap-2">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            Cargando equipos...
           </CardContent>
         ) : teams.length === 0 ? (
-          <CardContent className="py-10 text-center text-muted-foreground">
-            No hay equipos registrados. ¡Crea el primero!
+          <CardContent className="flex flex-col items-center justify-center py-16 gap-2 text-muted-foreground">
+            <span className="text-5xl">⚽</span>
+            <p className="font-medium">No hay equipos registrados</p>
+            <p className="text-sm">
+              Haz clic en &quot;Nuevo equipo&quot; para agregar el primero
+            </p>
           </CardContent>
         ) : (
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead className="w-16"></TableHead>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Formador</TableHead>
-                <TableHead>Lider</TableHead>
-                <TableHead className="text-center">Jugadores</TableHead>
-                <TableHead></TableHead>
+              <TableRow className="bg-gradient-to-r from-green-50 to-green-100">
+                <TableHead className="w-16 font-bold text-gray-900 py-4 px-4"></TableHead>
+                <TableHead className="font-bold text-gray-900 py-4 px-4">Nombre</TableHead>
+                <TableHead className="font-bold text-gray-900 py-4 px-4">Formador</TableHead>
+                <TableHead className="font-bold text-gray-900 py-4 px-4">Lider</TableHead>
+                <TableHead className="text-center font-bold text-gray-900 py-4 px-4">Jugadores</TableHead>
+                <TableHead className="text-right font-bold text-gray-900 py-4 px-4">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {teams.map((team) => (
-                <TableRow key={team.id}>
-                  <TableCell>
-                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-muted flex items-center justify-center border">
+                <TableRow key={team.id} className="hover:bg-green-50/50 transition-colors">
+                  <TableCell className="py-4 px-4">
+                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center border-2 border-green-200 shadow-sm">
                       {team.shield_url ? (
                         <img
                           src={`${BACKEND}${team.shield_url}`}
@@ -76,37 +90,36 @@ export default function TeamsPage() {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <Shield className="h-5 w-5 text-muted-foreground" />
+                        <Shield className="h-5 w-5 text-green-400" />
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="font-medium">{team.name}</TableCell>
-                  <TableCell>{team.coach_name}</TableCell>
-                  <TableCell>
+                  <TableCell className="font-bold text-gray-900 py-4 px-4">{team.name}</TableCell>
+                  <TableCell className="font-medium text-gray-700 py-4 px-4">{team.coach_name}</TableCell>
+                  <TableCell className="py-4 px-4">
                     {team.leader ? (
-                      <div className="flex items-center gap-1.5">
-                        <UserRound className="h-3.5 w-3.5 text-amber-500" />
-                        <span className="text-sm">
-                          {team.leader.first_name} {team.leader.first_surname}
-                        </span>
-                      </div>
+                      <Badge className="gap-1 bg-gradient-to-r from-amber-400 to-amber-500 text-white border-0 font-semibold shadow-md">
+                        <UserRound className="h-3 w-3" />
+                        {team.leader.first_name} {team.leader.first_surname}
+                      </Badge>
                     ) : (
-                      <span className="text-muted-foreground text-sm">—</span>
+                      <span className="text-gray-400">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant="secondary" className="gap-1">
+                  <TableCell className="text-center py-4 px-4">
+                    <Badge variant="secondary" className="gap-1 bg-gradient-to-r from-blue-400 to-blue-500 text-white border-0 font-bold shadow-md px-3 py-1">
                       <Users className="h-3 w-3" />
                       {team.players?.length || 0}
                     </Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-right py-4 px-4">
                     <Button
                       size="sm"
                       variant="outline"
+                      className="gap-1 border-2 border-green-500 text-green-700 hover:bg-green-500 hover:text-white font-semibold shadow-sm hover:shadow-md transition-all"
                       onClick={() => router.push(`/teams/${team.id}`)}
                     >
-                      <Eye className="h-4 w-4 mr-1" />
+                      <Eye className="h-3 w-3" />
                       Ver
                     </Button>
                   </TableCell>

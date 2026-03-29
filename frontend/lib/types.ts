@@ -81,26 +81,61 @@ export interface TeamCreate {
   leader_id?: number | null;
 }
 
+export type TournamentType = 'round_robin' | 'knockout' | 'mixed';
+export type MatchPhase = 'group' | 'round_of_16' | 'quarterfinal' | 'semifinal' | 'third_place' | 'final';
+
 export interface TournamentTemplate {
   id: number;
   name: string;
+  type: TournamentType;
   is_home_away: boolean;
+  points_win: number;
+  points_draw: number;
+  points_loss: number;
+  num_groups?: number | null;
+  teams_advance_per_group?: number | null;
+  third_place_match: boolean;
+  final_legs: number;
+  third_place_legs: number;
   created_at: string;
 }
 
 export interface TournamentTemplateCreate {
   name: string;
+  type: TournamentType;
   is_home_away?: boolean;
+  points_win?: number;
+  points_draw?: number;
+  points_loss?: number;
+  num_groups?: number | null;
+  teams_advance_per_group?: number | null;
+  third_place_match?: boolean;
+  final_legs?: number;
+  third_place_legs?: number;
 }
 
 export interface Tournament {
   id: number;
   name: string;
   template_id: number;
+  template?: TournamentTemplate;
   created_at: string;
 }
 
 export interface TournamentCreate {
   name: string;
   template_id: number;
+}
+
+export interface BracketMatch {
+  id: number;
+  round: number;
+  phase: MatchPhase;
+  bracket_position: number;
+  next_match_id?: number | null;
+  home_team?: { id: number; name: string } | null;
+  away_team?: { id: number; name: string } | null;
+  home_score?: number | null;
+  away_score?: number | null;
+  status: 'pending' | 'played';
 }

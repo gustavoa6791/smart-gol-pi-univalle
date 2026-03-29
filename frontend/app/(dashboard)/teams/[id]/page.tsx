@@ -239,7 +239,7 @@ export default function TeamDetailPage() {
             <ArrowLeft className="h-4 w-4 mr-1" />
             Volver
           </Button>
-          <h1 className="text-2xl font-bold truncate">{team.name}</h1>
+          <h1 className="text-2xl font-bold truncate bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">{team.name}</h1>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -247,6 +247,7 @@ export default function TeamDetailPage() {
             form="team-form"
             disabled={saving}
             size="sm"
+            className="gap-2 bg-gradient-to-r from-green-500 via-green-600 to-green-700 hover:from-green-600 hover:via-green-700 hover:to-green-800 text-white font-bold shadow-lg hover:shadow-xl transition-all"
           >
             {saving ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -272,12 +273,12 @@ export default function TeamDetailPage() {
 
       <div className="grid grid-cols-3 gap-6">
         {/* Escudo */}
-        <Card className="col-span-1">
-          <CardHeader>
+        <Card className="col-span-1 shadow-xl border-2 border-green-200 bg-white overflow-hidden pt-0 gap-0">
+          <CardHeader className="bg-gradient-to-r from-green-50 to-green-100 py-4">
             <CardTitle className="text-sm">Escudo</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col items-center gap-3">
-            <div className="w-48 h-48 rounded-xl overflow-hidden bg-muted flex items-center justify-center border-2 border-muted">
+          <CardContent className="flex flex-col items-center gap-3 pt-6">
+            <div className="w-48 h-48 rounded-xl overflow-hidden bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center border-2 border-green-200 shadow-md">
               {team.shield_url ? (
                 <img
                   src={`${BACKEND}${team.shield_url}`}
@@ -329,11 +330,11 @@ export default function TeamDetailPage() {
           onSubmit={handleSave}
           className="col-span-2 space-y-4"
         >
-          <Card>
-            <CardHeader>
+          <Card className="shadow-xl border-2 border-green-200 bg-white overflow-hidden pt-0 gap-0">
+            <CardHeader className="bg-gradient-to-r from-green-50 to-green-100 py-4">
               <CardTitle>Datos del equipo</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4">
+            <CardContent className="grid grid-cols-2 gap-4 pt-4">
               <div className="space-y-1">
                 <Label>Nombre del equipo *</Label>
                 <Input
@@ -356,15 +357,15 @@ export default function TeamDetailPage() {
       </div>
 
       {/* Jugadores */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+      <Card className="shadow-xl border-2 border-green-200 bg-white overflow-hidden pt-0 gap-0">
+        <CardHeader className="flex flex-row items-center justify-between bg-gradient-to-r from-green-50 to-green-100 py-4">
           <CardTitle>Plantilla de jugadores</CardTitle>
-          <Button size="sm" variant="outline" onClick={openSearchModal}>
+          <Button size="sm" variant="outline" onClick={openSearchModal} className="border-2 border-green-500 text-green-700 hover:bg-green-500 hover:text-white font-semibold shadow-sm hover:shadow-md transition-all">
             <Plus className="h-4 w-4 mr-1" />
             Agregar jugador
           </Button>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-4">
           {teamPlayers.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">
               No hay jugadores asignados. Haz clic en &quot;Agregar jugador&quot;
@@ -379,7 +380,7 @@ export default function TeamDetailPage() {
                 >
                   <div className="flex items-center gap-3">
                     {leaderId === player.id && (
-                      <Badge className="bg-amber-100 text-amber-800 gap-1">
+                      <Badge className="gap-1 bg-gradient-to-r from-amber-400 to-amber-500 text-white border-0 font-semibold shadow-md">
                         <UserRound className="h-3 w-3" />
                         Lider
                       </Badge>

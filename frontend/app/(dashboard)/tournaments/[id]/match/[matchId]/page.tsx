@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, Minus, ArrowLeft, Save } from "lucide-react";
+// Note: Plus/Minus used for player stats, Save for save button
 import { toast } from "sonner";
 
 interface Player {
@@ -35,8 +36,12 @@ interface PlayerStat {
 interface MatchDetail {
   id: number;
   round: number;
+  leg?: number | null;
+  phase?: string | null;
   home_score: number | null;
   away_score: number | null;
+  home_penalty: number | null;
+  away_penalty: number | null;
   status: "pending" | "played";
   home_team: Team;
   away_team: Team;
@@ -132,8 +137,8 @@ export default function MatchDetailPage() {
       });
       toast.success("Resultado guardado correctamente");
       router.push(`/tournaments/${tournamentId}/fixture`);
-    } catch {
-      toast.error("Error al guardar resultado");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || "Error al guardar resultado");
     } finally {
       setSaving(false);
     }
@@ -288,6 +293,8 @@ export default function MatchDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Penales se registran desde el fixture, no aqui */}
 
       {/* Equipo Local */}
       <Card>

@@ -48,6 +48,26 @@ class TeamCategory(str, py_enum.Enum):
     senior = "senior"
 
 
+class TournamentType(str, py_enum.Enum):
+    round_robin = "round_robin"
+    knockout = "knockout"
+    mixed = "mixed"
+
+
+class MatchPhase(str, py_enum.Enum):
+    group = "group"
+    round_of_16 = "round_of_16"
+    quarterfinal = "quarterfinal"
+    semifinal = "semifinal"
+    third_place = "third_place"
+    final = "final"
+
+
+class MatchStatus(str, py_enum.Enum):
+    pending = "pending"
+    played = "played"
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -119,12 +139,16 @@ class TournamentTemplate(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(150), nullable=False)
-    # Por ahora solo soportamos liga
-    type = Column(String(50), default="league")
-    # Configuración simple
-    is_home_away = Column(
-        Integer, default=0
-    )  # 0 = solo ida, 1 = ida y vuelta
+    type = Column(Enum(TournamentType), default=TournamentType.round_robin, nullable=False)
+    is_home_away = Column(Integer, default=0)  # 0 = solo ida, 1 = ida y vuelta
+    points_win = Column(Integer, default=3, nullable=False)
+    points_draw = Column(Integer, default=1, nullable=False)
+    points_loss = Column(Integer, default=0, nullable=False)
+    num_groups = Column(Integer, nullable=True)  # solo para mixed
+    teams_advance_per_group = Column(Integer, nullable=True)  # solo para mixed
+    third_place_match = Column(Integer, default=0)  # 0/1: partido por 3er puesto (knockout/mixed)
+    final_legs = Column(Integer, default=1)  # 1=un partido, 2=ida y vuelta
+    third_place_legs = Column(Integer, default=1)  # 1=un partido, 2=ida y vuelta
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 class Tournament(Base):
@@ -139,11 +163,6 @@ class Tournament(Base):
     template = relationship("TournamentTemplate")
     teams = relationship("Team", secondary=tournament_teams)
 
-class MatchStatus(str, py_enum.Enum):
-    pending = "pending"
-    played = "played"
-
-
 class Match(Base):
     __tablename__ = "matches"
 
@@ -151,13 +170,20 @@ class Match(Base):
 
     tournament_id = Column(Integer, ForeignKey("tournaments.id"), nullable=False)
 
-    home_team_id = Column(Integer, ForeignKey("teams.id"), nullable=False)
-    away_team_id = Column(Integer, ForeignKey("teams.id"), nullable=False)
+    home_team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)
+    away_team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)
 
     round = Column(Integer, nullable=False)  # jornada
+    leg = Column(Integer, nullable=True)  # 1=ida, 2=vuelta, null=partido unico
+    phase = Column(Enum(MatchPhase), nullable=True)  # null para round-robin puro
+    group_name = Column(String(10), nullable=True)  # "A", "B", "C" para fase de grupos
+    bracket_position = Column(Integer, nullable=True)  # posicion en el bracket
+    next_match_id = Column(Integer, ForeignKey("matches.id"), nullable=True)  # a donde avanza el ganador
 
     home_score = Column(Integer, nullable=True)
     away_score = Column(Integer, nullable=True)
+    home_penalty = Column(Integer, nullable=True)  # goles en penales (solo si hubo empate)
+    away_penalty = Column(Integer, nullable=True)
     status = Column(Enum(MatchStatus), default=MatchStatus.pending, nullable=False)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -166,6 +192,7 @@ class Match(Base):
     tournament = relationship("Tournament")
     home_team = relationship("Team", foreign_keys=[home_team_id])
     away_team = relationship("Team", foreign_keys=[away_team_id])
+    next_match = relationship("Match", remote_side=[id], foreign_keys=[next_match_id])
     player_stats = relationship("MatchPlayerStat", back_populates="match", cascade="all, delete-orphan")
 
 
