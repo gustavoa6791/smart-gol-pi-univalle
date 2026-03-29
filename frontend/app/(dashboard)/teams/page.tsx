@@ -70,18 +70,18 @@ export default function TeamsPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-gradient-to-r from-green-50 to-green-100">
-                <TableHead className="w-16 font-bold text-gray-900 py-4 px-4"></TableHead>
-                <TableHead className="font-bold text-gray-900 py-4 px-4">Nombre</TableHead>
-                <TableHead className="font-bold text-gray-900 py-4 px-4">Formador</TableHead>
-                <TableHead className="font-bold text-gray-900 py-4 px-4">Lider</TableHead>
-                <TableHead className="text-center font-bold text-gray-900 py-4 px-4">Jugadores</TableHead>
-                <TableHead className="text-right font-bold text-gray-900 py-4 px-4">Acciones</TableHead>
+                <TableHead className="w-16 font-bold text-gray-900 py-2 px-2"></TableHead>
+                <TableHead className="font-bold text-gray-900 py-2 px-2">Nombre</TableHead>
+                <TableHead className="font-bold text-gray-900 py-2 px-2">Formador</TableHead>
+                <TableHead className="font-bold text-gray-900 py-2 px-2">Lider</TableHead>
+                <TableHead className="text-center font-bold text-gray-900 py-2 px-2">Jugadores</TableHead>
+                <TableHead className="text-right font-bold text-gray-900 py-2 px-2">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {teams.map((team) => (
-                <TableRow key={team.id} className="hover:bg-green-50/50 transition-colors">
-                  <TableCell className="py-4 px-4">
+                <TableRow key={team.id} className="hover:bg-green-50/50 transition-colors h-[34px]">
+                  <TableCell className="py-2 px-2">
                     <div className="w-10 h-10 rounded-lg overflow-hidden bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center border-2 border-green-200 shadow-sm">
                       {team.shield_url ? (
                         <img
@@ -94,9 +94,9 @@ export default function TeamsPage() {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="font-bold text-gray-900 py-4 px-4">{team.name}</TableCell>
-                  <TableCell className="font-medium text-gray-700 py-4 px-4">{team.coach_name}</TableCell>
-                  <TableCell className="py-4 px-4">
+                  <TableCell className="font-bold text-gray-900 py-2 px-2">{team.name}</TableCell>
+                  <TableCell className="font-medium text-gray-700 py-2 px-2">{team.coach_name}</TableCell>
+                  <TableCell className="py-2 px-2">
                     {team.leader ? (
                       <Badge className="gap-1 bg-gradient-to-r from-amber-400 to-amber-500 text-white border-0 font-semibold shadow-md">
                         <UserRound className="h-3 w-3" />
@@ -106,13 +106,13 @@ export default function TeamsPage() {
                       <span className="text-gray-400">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-center py-4 px-4">
+                  <TableCell className="text-center py-2 px-2">
                     <Badge variant="secondary" className="gap-1 bg-gradient-to-r from-blue-400 to-blue-500 text-white border-0 font-bold shadow-md px-3 py-1">
                       <Users className="h-3 w-3" />
                       {team.players?.length || 0}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right py-4 px-4">
+                  <TableCell className="text-right py-2 px-2">
                     <Button
                       size="sm"
                       variant="outline"

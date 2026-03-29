@@ -96,48 +96,62 @@ export default function TemplatesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Plantillas de Torneos</h1>
-        <Button onClick={() => { setForm({ ...emptyForm }); setOpen(true); }} className="gap-2">
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">
+            Plantillas de Torneos
+          </h1>
+          <p className="text-muted-foreground text-sm font-medium">
+            Configura formatos reutilizables para tus torneos
+          </p>
+        </div>
+        <Button onClick={() => { setForm({ ...emptyForm }); setOpen(true); }} className="gap-2 bg-gradient-to-r from-green-500 via-green-600 to-green-700 hover:from-green-600 hover:via-green-700 hover:to-green-800 text-white font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
           <Plus className="h-4 w-4" />
           Nueva plantilla
         </Button>
       </div>
 
-      <Card>
+      {/* Table Card */}
+      <Card className="shadow-xl border-2 border-green-200 bg-white overflow-hidden pt-0 gap-0">
         {loading ? (
-          <CardContent className="py-10 flex justify-center">
-            <Loader2 className="animate-spin h-8 w-8" />
+          <CardContent className="flex items-center justify-center py-16 text-muted-foreground gap-2">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            Cargando plantillas...
           </CardContent>
         ) : templates.length === 0 ? (
-          <CardContent className="py-10 text-center text-muted-foreground">
-            No hay plantillas. ¡Crea la primera!
+          <CardContent className="flex flex-col items-center justify-center py-16 gap-2 text-muted-foreground">
+            <span className="text-5xl">⚽</span>
+            <p className="font-medium">No hay plantillas registradas</p>
+            <p className="text-sm">
+              Haz clic en &quot;Nueva plantilla&quot; para crear la primera
+            </p>
           </CardContent>
         ) : (
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Formato</TableHead>
-                <TableHead>Puntos (V/E/D)</TableHead>
-                <TableHead>Config. extra</TableHead>
-                <TableHead></TableHead>
+              <TableRow className="bg-gradient-to-r from-green-50 to-green-100">
+                <TableHead className="font-bold text-gray-900 py-2 px-2">Nombre</TableHead>
+                <TableHead className="font-bold text-gray-900 py-2 px-2">Tipo</TableHead>
+                <TableHead className="font-bold text-gray-900 py-2 px-2">Formato</TableHead>
+                <TableHead className="font-bold text-gray-900 py-2 px-2">Puntos (V/E/D)</TableHead>
+                <TableHead className="font-bold text-gray-900 py-2 px-2">Config. extra</TableHead>
+                <TableHead className="text-right font-bold text-gray-900 py-2 px-2">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {templates.map((t) => (
-                <TableRow key={t.id}>
-                  <TableCell className="font-medium">{t.name}</TableCell>
-                  <TableCell>
+                <TableRow key={t.id} className="hover:bg-green-50/50 transition-colors h-[34px]">
+                  <TableCell className="font-bold text-gray-900 py-2 px-2">{t.name}</TableCell>
+                  <TableCell className="py-2 px-2">
                     <Badge className={TYPE_COLORS[t.type]}>
                       {TYPE_LABELS[t.type]}
                     </Badge>
                   </TableCell>
-                  <TableCell>{t.is_home_away ? "Ida y vuelta" : "Solo ida"}</TableCell>
-                  <TableCell>{t.points_win}/{t.points_draw}/{t.points_loss}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
+                  <TableCell className="font-medium text-gray-700 py-2 px-2">{t.is_home_away ? "Ida y vuelta" : "Solo ida"}</TableCell>
+                  <TableCell className="font-medium text-gray-700 py-2 px-2">{t.points_win}/{t.points_draw}/{t.points_loss}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground py-2 px-2">
                     {t.type === "mixed" && t.num_groups && t.teams_advance_per_group
                       ? `${t.num_groups} grupos, ${t.teams_advance_per_group} avanzan`
                       : ""}
@@ -148,7 +162,7 @@ export default function TemplatesPage() {
                       </>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-right py-2 px-2">
                     <Button size="icon" variant="ghost" className="text-destructive" onClick={() => handleDelete(t.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>

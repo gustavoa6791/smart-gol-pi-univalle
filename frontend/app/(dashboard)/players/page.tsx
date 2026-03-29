@@ -58,65 +58,80 @@ export default function PlayersPage() {
   }, []);
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Jugadores</h1>
-        <Button onClick={() => router.push("/players/new")} className="gap-2">
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">
+            Jugadores
+          </h1>
+          <p className="text-muted-foreground text-sm font-medium">
+            Gestiona los jugadores del club
+          </p>
+        </div>
+        <Button onClick={() => router.push("/players/new")} className="gap-2 bg-gradient-to-r from-green-500 via-green-600 to-green-700 hover:from-green-600 hover:via-green-700 hover:to-green-800 text-white font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
           <Plus className="h-4 w-4" />
           Nuevo jugador
         </Button>
       </div>
 
-      <Card>
+      {/* Table Card */}
+      <Card className="shadow-xl border-2 border-green-200 bg-white overflow-hidden pt-0 gap-0">
         {loading ? (
-          <CardContent className="py-10 flex justify-center">
-            <Loader2 className="animate-spin h-8 w-8" />
+          <CardContent className="flex items-center justify-center py-16 text-muted-foreground gap-2">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            Cargando jugadores...
           </CardContent>
         ) : players.length === 0 ? (
-          <CardContent className="py-10 text-center text-muted-foreground">
-            No hay jugadores registrados. ¡Crea el primero!
+          <CardContent className="flex flex-col items-center justify-center py-16 gap-2 text-muted-foreground">
+            <span className="text-5xl">⚽</span>
+            <p className="font-medium">No hay jugadores registrados</p>
+            <p className="text-sm">
+              Haz clic en &quot;Nuevo jugador&quot; para agregar el primero
+            </p>
           </CardContent>
         ) : (
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Nombre completo</TableHead>
-                <TableHead>Posición</TableHead>
-                <TableHead className="text-center">Edad</TableHead>
-                <TableHead>Teléfono</TableHead>
-                <TableHead>Documento</TableHead>
-                <TableHead></TableHead>
+              <TableRow className="bg-gradient-to-r from-green-50 to-green-100">
+                <TableHead className="font-bold text-gray-900 py-2 px-2">Nombre completo</TableHead>
+                <TableHead className="font-bold text-gray-900 py-2 px-2">Posicion</TableHead>
+                <TableHead className="text-center font-bold text-gray-900 py-2 px-2">Edad</TableHead>
+                <TableHead className="font-bold text-gray-900 py-2 px-2">Telefono</TableHead>
+                <TableHead className="font-bold text-gray-900 py-2 px-2">Documento</TableHead>
+                <TableHead className="text-right font-bold text-gray-900 py-2 px-2">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {players.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell className="font-medium">{fullName(p)}</TableCell>
-                  <TableCell>
+                <TableRow key={p.id} className="hover:bg-green-50/50 transition-colors h-[34px]">
+                  <TableCell className="font-bold text-gray-900 py-2 px-2">{fullName(p)}</TableCell>
+                  <TableCell className="py-2 px-2">
                     {p.position ? (
                       <Badge className={POSITION_COLORS[p.position]}>
                         {POSITION_LABELS[p.position]}
                       </Badge>
                     ) : (
-                      <span className="text-muted-foreground text-sm">-</span>
+                      <span className="text-gray-400">-</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-center">
+                  <TableCell className="text-center py-2 px-2">
                     {calcAge(p.birth_date)}
                   </TableCell>
-                  <TableCell>{p.phone || "-"}</TableCell>
-                  <TableCell>
+                  <TableCell className="font-medium text-gray-700 py-2 px-2">{p.phone || "-"}</TableCell>
+                  <TableCell className="font-medium text-gray-700 py-2 px-2">
                     {p.document_type && p.document_number
                       ? `${p.document_type} ${p.document_number}`
                       : "-"}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-right py-2 px-2">
                     <Button
                       size="sm"
                       variant="outline"
+                      className="gap-1 border-2 border-green-500 text-green-700 hover:bg-green-500 hover:text-white font-semibold shadow-sm hover:shadow-md transition-all"
                       onClick={() => router.push(`/players/${p.id}`)}
                     >
-                      <Eye className="h-4 w-4 mr-1" />
+                      <Eye className="h-3 w-3" />
                       Ver
                     </Button>
                   </TableCell>

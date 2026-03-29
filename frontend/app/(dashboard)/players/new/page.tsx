@@ -77,19 +77,19 @@ export default function NewPlayerPage() {
             <ArrowLeft className="h-4 w-4 mr-1" />
             Volver
           </Button>
-          <h1 className="text-3xl font-bold">Nuevo jugador</h1>
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">Nuevo jugador</h1>
         </div>
-        <Button type="submit" disabled={saving} size="sm">
+        <Button type="submit" disabled={saving} size="sm" className="gap-2 bg-gradient-to-r from-green-500 via-green-600 to-green-700 hover:from-green-600 hover:via-green-700 hover:to-green-800 text-white font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
           {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
           Crear jugador
         </Button>
       </div>
         {/* Nombres */}
-        <Card>
-          <CardHeader>
+        <Card className="shadow-xl border-2 border-green-200 bg-white overflow-hidden pt-0 gap-0">
+          <CardHeader className="bg-gradient-to-r from-green-50 to-green-100 py-4">
             <CardTitle>Datos personales</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4">
+          <CardContent className="grid grid-cols-2 gap-4 pt-4">
             <div className="space-y-2">
               <Label>Primer nombre *</Label>
               <Input
@@ -174,11 +174,11 @@ export default function NewPlayerPage() {
         </Card>
 
         {/* Documento */}
-        <Card>
-          <CardHeader>
+        <Card className="shadow-xl border-2 border-green-200 bg-white overflow-hidden pt-0 gap-0">
+          <CardHeader className="bg-gradient-to-r from-green-50 to-green-100 py-4">
             <CardTitle>Documento de identidad</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4">
+          <CardContent className="grid grid-cols-2 gap-4 pt-4">
             <div className="space-y-2">
               <Label>Tipo de documento</Label>
               <select
@@ -204,11 +204,11 @@ export default function NewPlayerPage() {
         </Card>
 
         {/* Deportivo */}
-        <Card>
-          <CardHeader>
+        <Card className="shadow-xl border-2 border-green-200 bg-white overflow-hidden pt-0 gap-0">
+          <CardHeader className="bg-gradient-to-r from-green-50 to-green-100 py-4">
             <CardTitle>Información deportiva</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-4">
             <div className="space-y-2">
               <Label>Posición</Label>
               <select
