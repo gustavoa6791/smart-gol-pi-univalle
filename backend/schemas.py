@@ -129,13 +129,13 @@ class TeamCategory(str, Enum):
 
 class TeamBase(BaseModel):
     name: str
-    category: TeamCategory
+    category: Optional[TeamCategory] = None
     coach_name: str
 
 
 class TeamCreate(TeamBase):
-    player_ids: Optional[List[int]] = None  # Lista de IDs de jugadores (solo para creación)
-    leader_id: Optional[int] = None  # Líder del equipo (debe estar en player_ids)
+    player_ids: Optional[List[int]] = None
+    leader_id: Optional[int] = None
 
 
 class TeamUpdate(BaseModel):
@@ -143,16 +143,20 @@ class TeamUpdate(BaseModel):
     category: Optional[TeamCategory] = None
     coach_name: Optional[str] = None
     player_ids: Optional[List[int]] = None
-    leader_id: Optional[int] = None  # Líder del equipo (debe ser miembro del equipo)
+    leader_id: Optional[int] = None
 
 
-class TeamOut(TeamBase):
+class TeamOut(BaseModel):
     id: int
+    name: str
+    category: Optional[TeamCategory] = None
+    coach_name: str
+    shield_url: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
-    players: Optional[List[PlayerOut]] = None  # Lista completa de jugadores (no player_ids)
+    players: Optional[List[PlayerOut]] = None
     leader_id: Optional[int] = None
-    leader: Optional[PlayerOut] = None  # Datos del jugador líder (capitán/contacto)
+    leader: Optional[PlayerOut] = None
 
     class Config:
         from_attributes = True

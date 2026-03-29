@@ -103,9 +103,10 @@ class Team(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(150), nullable=False, index=True)
-    category = Column(Enum(TeamCategory), nullable=False, index=True)
+    category = Column(Enum(TeamCategory), nullable=True, index=True)
     coach_name = Column(String(150), nullable=False)  # Nombre del formador como texto
     leader_id = Column(Integer, ForeignKey("players.id"), nullable=True, index=True)  # Un solo líder por equipo
+    shield_url = Column(String(500), nullable=True)  # URL del escudo del equipo
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

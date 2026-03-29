@@ -64,8 +64,9 @@ export type TeamCategory = 'sub_10' | 'sub_12' | 'sub_14' | 'sub_16' | 'sub_18' 
 export interface Team {
   id: number;
   name: string;
-  category: TeamCategory;
+  category?: TeamCategory | null;
   coach_name: string;
+  shield_url?: string | null;
   created_at: string;
   updated_at?: string;
   players?: Player[];
@@ -75,7 +76,6 @@ export interface Team {
 
 export interface TeamCreate {
   name: string;
-  category: TeamCategory;
   coach_name: string;
   player_ids?: number[];
   leader_id?: number | null;

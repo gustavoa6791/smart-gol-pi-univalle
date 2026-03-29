@@ -1,9 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+import os
+import uuid
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session, selectinload
 from typing import List
 
 from database import get_db
 import models, schemas, auth as auth_utils
+
+UPLOAD_DIR = "/app/uploads"
+SHIELDS_DIR = os.path.join(UPLOAD_DIR, "shields")
+os.makedirs(SHIELDS_DIR, exist_ok=True)
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
 router = APIRouter(prefix="/api/teams", tags=["teams"])
 
@@ -34,16 +41,18 @@ def create_team(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth_utils.get_current_user),
 ):
-    # Validar que el nombre del equipo sea único por categoría
-    existing_team = db.query(models.Team).filter(
-        models.Team.name == team_data.name,
-        models.Team.category == team_data.category
-    ).first()
-    
+    # Validar que el nombre del equipo sea único (por categoría si aplica)
+    query = db.query(models.Team).filter(models.Team.name == team_data.name)
+    if team_data.category:
+        query = query.filter(models.Team.category == team_data.category)
+    else:
+        query = query.filter(models.Team.category.is_(None))
+    existing_team = query.first()
+
     if existing_team:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Ya existe un equipo con el nombre '{team_data.name}' en la categoría {team_data.category.value}",
+            detail=f"Ya existe un equipo con el nombre '{team_data.name}'",
         )
     
     # Crear el equipo
@@ -133,21 +142,23 @@ def update_team(
     if not team:
         raise HTTPException(status_code=404, detail="Team not found")
     
-    # Validar nombre único por categoría si se está actualizando el nombre o categoría
-    if team_data.name or team_data.category:
-        new_name = team_data.name if team_data.name else team.name
-        new_category = team_data.category if team_data.category else team.category
-        
-        existing_team = db.query(models.Team).filter(
+    # Validar nombre único si se está actualizando el nombre
+    if team_data.name:
+        new_name = team_data.name
+        query = db.query(models.Team).filter(
             models.Team.name == new_name,
-            models.Team.category == new_category,
             models.Team.id != team_id
-        ).first()
-        
+        )
+        new_category = team_data.category if team_data.category else team.category
+        if new_category:
+            query = query.filter(models.Team.category == new_category)
+        else:
+            query = query.filter(models.Team.category.is_(None))
+        existing_team = query.first()
         if existing_team:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Ya existe un equipo con el nombre '{new_name}' en la categoría {new_category.value}",
+                detail=f"Ya existe un equipo con el nombre '{new_name}'",
             )
     
     # Actualizar campos básicos (excluir player_ids y leader_id)
@@ -177,6 +188,58 @@ def update_team(
     # Recargar el equipo con los jugadores y el líder para devolverlos en la respuesta
     team = _teams_query(db).filter(models.Team.id == team_id).first()
     return team
+
+
+@router.post("/{team_id}/shield", response_model=schemas.TeamOut)
+async def upload_shield(
+    team_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _: models.User = Depends(auth_utils.get_current_user),
+):
+    team = db.query(models.Team).filter(models.Team.id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    if file.content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(status_code=400, detail="Tipo de archivo no permitido. Use JPG, PNG o WebP.")
+
+    ext = file.filename.split(".")[-1]
+    filename = f"{uuid.uuid4()}.{ext}"
+    path = os.path.join(SHIELDS_DIR, filename)
+
+    if team.shield_url:
+        old_path = os.path.join(UPLOAD_DIR, team.shield_url.replace("/uploads/", ""))
+        if os.path.exists(old_path):
+            os.remove(old_path)
+
+    content = await file.read()
+    with open(path, "wb") as f:
+        f.write(content)
+
+    team.shield_url = f"/uploads/shields/{filename}"
+    db.commit()
+    return _teams_query(db).filter(models.Team.id == team_id).first()
+
+
+@router.delete("/{team_id}/shield", response_model=schemas.TeamOut)
+def delete_shield(
+    team_id: int,
+    db: Session = Depends(get_db),
+    _: models.User = Depends(auth_utils.get_current_user),
+):
+    team = db.query(models.Team).filter(models.Team.id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    if team.shield_url:
+        path = os.path.join(UPLOAD_DIR, team.shield_url.replace("/uploads/", ""))
+        if os.path.exists(path):
+            os.remove(path)
+        team.shield_url = None
+        db.commit()
+
+    return _teams_query(db).filter(models.Team.id == team_id).first()
 
 
 @router.delete("/{team_id}", status_code=status.HTTP_204_NO_CONTENT)
