@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -10,8 +9,7 @@ import {
   LayoutDashboard,
   Users,
   LogOut,
-  ChevronFirst,
-  ChevronLast,
+  PanelLeftClose,
   Trophy,
   CalendarDays,
 } from "lucide-react";
@@ -25,8 +23,12 @@ const navItems = [
   { href: "/tournaments/manage", label: "Torneos", icon: Trophy },
 ];
 
-export function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false);
+interface SidebarProps {
+  collapsed: boolean;
+  setCollapsed: (v: boolean) => void;
+}
+
+export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -41,18 +43,27 @@ export function Sidebar() {
     <aside
       className={cn(
         "flex flex-col h-full bg-card border-r border-border transition-all duration-300 ease-in-out",
-        collapsed ? "w-16" : "w-60"
+        collapsed ? "w-20" : "w-60"
       )}
     >
       {/* Logo */}
-      <div className="flex items-center gap-4 px-6 h-[60px] border-b-2 border-green-200 bg-gradient-to-r from-green-50 via-white to-green-50">
-        <span className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 via-green-600 to-green-700 flex items-center justify-center text-white text-xl shadow-lg hover:shadow-xl transition-shadow leading-none">
+      <div className="flex items-center gap-2 px-3 h-[60px] border-b-2 border-green-200 bg-gradient-to-r from-green-50 via-white to-green-50">
+        <span className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 via-green-600 to-green-700 flex items-center justify-center text-white text-xl shadow-lg hover:shadow-xl transition-shadow leading-none">
           ⚽
         </span>
         {!collapsed && (
-          <span className="font-bold text-lg tracking-tight whitespace-nowrap overflow-hidden text-gray-900 leading-tight">
-            Smart Gol
-          </span>
+          <>
+            <span className="font-bold text-lg tracking-tight whitespace-nowrap overflow-hidden text-gray-900 leading-tight flex-1">
+              Smart Gol
+            </span>
+            <button
+              onClick={() => setCollapsed(true)}
+              title="Contraer menú"
+              className="flex-shrink-0 flex items-center justify-center rounded-md text-gray-700 hover:text-green-700 hover:bg-green-100 transition-colors border border-green-300 p-1"
+            >
+              <PanelLeftClose style={{ width: 22, height: 22, strokeWidth: 1.5 }} />
+            </button>
+          </>
         )}
       </div>
 
@@ -89,29 +100,12 @@ export function Sidebar() {
         <button
           onClick={logout}
           title={collapsed ? "Cerrar sesión" : undefined}
-          className="flex items-center gap-3 w-full rounded-md px-2 py-2.5 text-sm text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors font-medium"
+          className="flex items-center gap-3 w-full rounded-md px-2 py-2.5 text-sm text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors font-medium border border-red-300"
         >
           <LogOut className="flex-shrink-0 h-5 w-5" />
           {!collapsed && <span className="whitespace-nowrap">Cerrar sesión</span>}
         </button>
 
-        {/* Toggle collapse */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setCollapsed(!collapsed)}
-          title={collapsed ? "Expandir menú" : "Contraer menú"}
-          className="flex items-center gap-3 justify-start px-2 text-gray-600"
-        >
-          {collapsed ? (
-            <ChevronLast className="h-5 w-5 flex-shrink-0" />
-          ) : (
-            <>
-              <ChevronFirst className="h-5 w-5 flex-shrink-0" />
-              <span className="text-xs">Contraer</span>
-            </>
-          )}
-        </Button>
       </div>
     </aside>
   );
