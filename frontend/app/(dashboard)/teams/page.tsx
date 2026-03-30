@@ -6,6 +6,7 @@ import api from "@/lib/api";
 import { Team } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -15,15 +16,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Plus, Eye, Shield, UserRound, Users } from "lucide-react";
+import { Loader2, Plus, Eye, Shield, UserRound, Users, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 const BACKEND = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const PAGE_SIZE = 8;
 
 export default function TeamsPage() {
   const router = useRouter();
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     api
@@ -32,6 +36,18 @@ export default function TeamsPage() {
       .catch(() => toast.error("Error al cargar equipos"))
       .finally(() => setLoading(false));
   }, []);
+
+  const filtered = teams.filter((t) => {
+    if (!search.trim()) return true;
+    const q = search.trim().toLowerCase();
+    return t.name.toLowerCase().includes(q) || t.coach_name.toLowerCase().includes(q);
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  useEffect(() => { setPage(1); }, [search]);
 
   return (
     <div className="space-y-8">
@@ -51,6 +67,17 @@ export default function TeamsPage() {
         </Button>
       </div>
 
+      {/* Buscador */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar por nombre o formador..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
       {/* Table Card */}
       <Card className="shadow-xl border-2 border-green-200 bg-white overflow-hidden pt-0 gap-0">
         {loading ? (
@@ -58,75 +85,110 @@ export default function TeamsPage() {
             <Loader2 className="h-5 w-5 animate-spin" />
             Cargando equipos...
           </CardContent>
-        ) : teams.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <CardContent className="flex flex-col items-center justify-center py-16 gap-2 text-muted-foreground">
             <span className="text-5xl">⚽</span>
-            <p className="font-medium">No hay equipos registrados</p>
+            <p className="font-medium">
+              {search.trim() ? "No se encontraron equipos" : "No hay equipos registrados"}
+            </p>
             <p className="text-sm">
-              Haz clic en &quot;Nuevo equipo&quot; para agregar el primero
+              {search.trim()
+                ? "Intenta con otro nombre o formador"
+                : 'Haz clic en "Nuevo equipo" para agregar el primero'}
             </p>
           </CardContent>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-gradient-to-r from-green-50 to-green-100">
-                <TableHead className="w-16 font-bold text-gray-900 py-2 px-2"></TableHead>
-                <TableHead className="font-bold text-gray-900 py-2 px-2">Nombre</TableHead>
-                <TableHead className="font-bold text-gray-900 py-2 px-2">Formador</TableHead>
-                <TableHead className="font-bold text-gray-900 py-2 px-2">Lider</TableHead>
-                <TableHead className="text-center font-bold text-gray-900 py-2 px-2">Jugadores</TableHead>
-                <TableHead className="text-right font-bold text-gray-900 py-2 px-2">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {teams.map((team) => (
-                <TableRow key={team.id} className="hover:bg-green-50/50 transition-colors h-[34px]">
-                  <TableCell className="py-2 px-2">
-                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center border-2 border-green-200 shadow-sm">
-                      {team.shield_url ? (
-                        <img
-                          src={`${BACKEND}${team.shield_url}`}
-                          alt={team.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <Shield className="h-5 w-5 text-green-400" />
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-bold text-gray-900 py-2 px-2">{team.name}</TableCell>
-                  <TableCell className="font-medium text-gray-700 py-2 px-2">{team.coach_name}</TableCell>
-                  <TableCell className="py-2 px-2">
-                    {team.leader ? (
-                      <Badge className="gap-1 bg-gradient-to-r from-amber-400 to-amber-500 text-white border-0 font-semibold shadow-md">
-                        <UserRound className="h-3 w-3" />
-                        {team.leader.first_name} {team.leader.first_surname}
-                      </Badge>
-                    ) : (
-                      <span className="text-gray-400">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center py-2 px-2">
-                    <Badge variant="secondary" className="gap-1 bg-gradient-to-r from-blue-400 to-blue-500 text-white border-0 font-bold shadow-md px-3 py-1">
-                      <Users className="h-3 w-3" />
-                      {team.players?.length || 0}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right py-2 px-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-1 border-2 border-green-500 text-green-700 hover:bg-green-500 hover:text-white font-semibold shadow-sm hover:shadow-md transition-all"
-                      onClick={() => router.push(`/teams/${team.id}`)}
-                    >
-                      <Eye className="h-3 w-3" />
-                      Ver
-                    </Button>
-                  </TableCell>
+          <>
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gradient-to-r from-green-50 to-green-100">
+                  <TableHead className="w-16 font-bold text-gray-900 py-2 px-2"></TableHead>
+                  <TableHead className="font-bold text-gray-900 py-2 px-2">Nombre</TableHead>
+                  <TableHead className="font-bold text-gray-900 py-2 px-2">Formador</TableHead>
+                  <TableHead className="font-bold text-gray-900 py-2 px-2">Lider</TableHead>
+                  <TableHead className="text-center font-bold text-gray-900 py-2 px-2">Jugadores</TableHead>
+                  <TableHead className="text-right font-bold text-gray-900 py-2 px-2">Acciones</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {paged.map((team) => (
+                  <TableRow key={team.id} className="hover:bg-green-50/50 transition-colors h-[34px]">
+                    <TableCell className="py-2 px-2">
+                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center border-2 border-green-200 shadow-sm">
+                        {team.shield_url ? (
+                          <img
+                            src={`${BACKEND}${team.shield_url}`}
+                            alt={team.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Shield className="h-5 w-5 text-green-400" />
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-bold text-gray-900 py-2 px-2">{team.name}</TableCell>
+                    <TableCell className="font-medium text-gray-700 py-2 px-2">{team.coach_name}</TableCell>
+                    <TableCell className="py-2 px-2">
+                      {team.leader ? (
+                        <Badge className="gap-1 bg-gradient-to-r from-amber-400 to-amber-500 text-white border-0 font-semibold shadow-md">
+                          <UserRound className="h-3 w-3" />
+                          {team.leader.first_name} {team.leader.first_surname}
+                        </Badge>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center py-2 px-2">
+                      <Badge variant="secondary" className="gap-1 bg-gradient-to-r from-blue-400 to-blue-500 text-white border-0 font-bold shadow-md px-3 py-1">
+                        <Users className="h-3 w-3" />
+                        {team.players?.length || 0}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right py-2 px-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1 border-2 border-green-500 text-green-700 hover:bg-green-500 hover:text-white font-semibold shadow-sm hover:shadow-md transition-all"
+                        onClick={() => router.push(`/teams/${team.id}`)}
+                      >
+                        <Eye className="h-3 w-3" />
+                        Ver
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+
+            {/* Paginacion */}
+            <div className="flex items-center justify-between px-4 py-3 border-t">
+              <p className="text-sm text-muted-foreground">
+                {filtered.length} equipo{filtered.length !== 1 ? "s" : ""}
+                {search.trim() ? " encontrados" : " en total"}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={currentPage <= 1}
+                  onClick={() => setPage(currentPage - 1)}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm font-medium px-2">
+                  {currentPage} / {totalPages}
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setPage(currentPage + 1)}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </>
         )}
       </Card>
     </div>
