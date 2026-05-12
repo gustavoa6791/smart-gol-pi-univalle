@@ -9,11 +9,34 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=schemas.UserOut, status_code=status.HTTP_201_CREATED)
-def register(
+def register(user_data: schemas.UserRegister, db: Session = Depends(get_db)):
+    """Registro publico: siempre crea usuarios como viewer."""
+    existing = db.query(models.User).filter(models.User.email == user_data.email).first()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered",
+        )
+    hashed = auth_utils.hash_password(user_data.password)
+    user = models.User(
+        name=user_data.name,
+        email=user_data.email,
+        hashed_password=hashed,
+        role=models.UserRole.viewer,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@router.post("/admin/users", response_model=schemas.UserOut, status_code=status.HTTP_201_CREATED)
+def admin_create_user(
     user_data: schemas.UserRegister,
     db: Session = Depends(get_db),
     _: models.User = Depends(auth_utils.require_admin),
 ):
+    """Creacion de usuario por admin: permite asignar rol."""
     existing = db.query(models.User).filter(models.User.email == user_data.email).first()
     if existing:
         raise HTTPException(

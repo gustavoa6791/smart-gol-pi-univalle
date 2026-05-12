@@ -18,6 +18,7 @@ def seed_data():
             ("Admin Demo", "admin@email.com", "admin123", models.UserRole.admin),
             ("Organizador Demo", "organizer@email.com", "organizer123", models.UserRole.organizer),
             ("Viewer Demo", "viewer@email.com", "viewer123", models.UserRole.viewer),
+            ("Gustavo", "gustavo@email.com", "gustavo123", models.UserRole.admin),
         ]
 
         for name, email, password, role in users_to_seed:

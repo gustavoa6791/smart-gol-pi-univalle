@@ -64,7 +64,7 @@ export default function UsersPage() {
     }
     setSaving(true);
     try {
-      await api.post("/api/auth/register", form);
+      await api.post("/api/auth/admin/users", form);
       toast.success("Usuario creado");
       setCreateOpen(false);
       setForm({ name: "", email: "", password: "", role: "viewer" });

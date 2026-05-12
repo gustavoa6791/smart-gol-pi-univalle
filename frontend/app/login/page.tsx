@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import api from "@/lib/api";
+import { PublicHeader } from "@/components/public-header";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -45,7 +47,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-green-50 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50">
+      <PublicHeader />
+      <div className="flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm space-y-6">
         {/* Brand */}
         <div className="text-center space-y-3">
@@ -102,10 +106,15 @@ export default function LoginPage() {
               </Button>
             </form>
           </CardContent>
-          <CardFooter className="flex justify-center text-sm text-muted-foreground text-center">
-            Solo los administradores pueden crear nuevas cuentas.
+          <CardFooter className="flex justify-center text-sm text-muted-foreground">
+            ¿No tienes cuenta?&nbsp;
+            <Link href="/register" className="font-medium text-primary hover:underline">
+              Regístrate
+            </Link>
           </CardFooter>
         </Card>
+
+      </div>
       </div>
     </div>
   );
