@@ -46,6 +46,8 @@ export default function TournamentManagePage() {
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
   const [selectedTeamIds, setSelectedTeamIds] = useState<number[]>([]);
   const [fixtureMap, setFixtureMap] = useState<Record<number, boolean>>({});
+  const [teamsCountMap, setTeamsCountMap] = useState<Record<number, number>>({});
+  const [advancedMap, setAdvancedMap] = useState<Record<number, boolean>>({});
 
   const [form, setForm] = useState<TournamentCreate>({ name: "", template_id: 0 });
 
@@ -62,17 +64,31 @@ export default function TournamentManagePage() {
         setTeams(team.data);
 
         const map: Record<number, boolean> = {};
+        const teamCounts: Record<number, number> = {};
+        const advanced: Record<number, boolean> = {};
         await Promise.all(
           t.data.map(async (tour: Tournament) => {
             try {
-              const res = await api.get(`/api/tournaments/${tour.id}/matches`);
-              map[tour.id] = res.data.length > 0;
+              const [mRes, tmRes] = await Promise.all([
+                api.get(`/api/tournaments/${tour.id}/matches`),
+                api.get(`/api/tournaments/${tour.id}/teams`),
+              ]);
+              map[tour.id] = mRes.data.length > 0;
+              teamCounts[tour.id] = tmRes.data.length;
+              advanced[tour.id] = mRes.data.some(
+                (m: { phase?: string | null; home_team?: { id: number } | null }) =>
+                  m.phase && m.phase !== "group" && m.home_team != null
+              );
             } catch {
               map[tour.id] = false;
+              teamCounts[tour.id] = 0;
+              advanced[tour.id] = false;
             }
           })
         );
         setFixtureMap(map);
+        setTeamsCountMap(teamCounts);
+        setAdvancedMap(advanced);
       })
       .catch(() => toast.error("Error cargando datos"))
       .finally(() => setLoading(false));
@@ -113,6 +129,10 @@ export default function TournamentManagePage() {
     try {
       await api.post(`/api/tournaments/${selectedTournament.id}/teams`, { team_ids: selectedTeamIds });
       toast.success("Equipos asignados");
+      setTeamsCountMap((prev) => ({
+        ...prev,
+        [selectedTournament.id]: (prev[selectedTournament.id] || 0) + selectedTeamIds.length,
+      }));
       setTeamsOpen(false);
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || "Error asignando equipos");
@@ -144,6 +164,7 @@ export default function TournamentManagePage() {
     try {
       const res = await api.post(`/api/tournaments/${id}/advance-to-knockout`);
       toast.success(res.data.message);
+      setAdvancedMap((prev) => ({ ...prev, [id]: true }));
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || "Error al avanzar a eliminatoria");
     }
@@ -201,6 +222,7 @@ export default function TournamentManagePage() {
               {tournaments.map((t) => {
                 const type = getType(t);
                 const hasFixture = fixtureMap[t.id];
+                const hasTeams = (teamsCountMap[t.id] || 0) > 0;
                 return (
                   <TableRow key={t.id} className="hover:bg-green-50/50 transition-colors h-[34px]">
                     <TableCell className="font-bold text-gray-900 py-2 px-2">{t.name}</TableCell>
@@ -212,9 +234,11 @@ export default function TournamentManagePage() {
                     </TableCell>
                     <TableCell className="py-2 px-2">
                       <div className="flex flex-wrap gap-2">
-                        <Button size="sm" variant="outline" onClick={() => openAssignTeams(t)}>
-                          Asignar equipos
-                        </Button>
+                        {!hasTeams && (
+                          <Button size="sm" variant="outline" onClick={() => openAssignTeams(t)}>
+                            Asignar equipos
+                          </Button>
+                        )}
 
                         {!hasFixture && (
                           <Button size="sm" variant="outline" onClick={() => generateFixture(t.id)}>
@@ -239,11 +263,16 @@ export default function TournamentManagePage() {
                             {(type === "knockout" || type === "mixed") && (
                               <Button size="sm" variant="outline"
                                 onClick={() => router.push(`/tournaments/${t.id}/bracket`)}>
-                                Ver bracket
+                                Ver eliminatorias
                               </Button>
                             )}
 
-                            {type === "mixed" && (
+                            <Button size="sm" variant="outline"
+                              onClick={() => router.push(`/tournaments/${t.id}/scorers`)}>
+                              Goleadores
+                            </Button>
+
+                            {type === "mixed" && !advancedMap[t.id] && (
                               <Button size="sm" variant="outline"
                                 onClick={() => advanceToKnockout(t.id)}>
                                 Avanzar a eliminatoria

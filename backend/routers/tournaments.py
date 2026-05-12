@@ -758,6 +758,60 @@ def get_standings(
     )
 
 
+# ─── SCORERS ─────────────────────────────────────────────────────────────────
+
+@router.get("/{tournament_id}/scorers", response_model=List[schemas.ScorerRow])
+def get_scorers(
+    tournament_id: int,
+    db: Session = Depends(get_db),
+    _: models.User = Depends(auth_utils.get_current_user),
+):
+    tournament = db.query(models.Tournament).filter(
+        models.Tournament.id == tournament_id
+    ).first()
+    if not tournament:
+        raise HTTPException(status_code=404, detail="Tournament not found")
+
+    stats = db.query(models.MatchPlayerStat).options(
+        selectinload(models.MatchPlayerStat.player),
+        selectinload(models.MatchPlayerStat.match),
+    ).join(models.Match, models.MatchPlayerStat.match_id == models.Match.id).filter(
+        models.Match.tournament_id == tournament_id,
+        models.Match.status == models.MatchStatus.played,
+    ).all()
+
+    teams_by_id = {t.id: t for t in tournament.teams}
+
+    agg: Dict[int, dict] = {}
+    for s in stats:
+        if s.goals <= 0 or not s.player:
+            continue
+        row = agg.get(s.player_id)
+        if not row:
+            team = teams_by_id.get(s.team_id)
+            full_name = " ".join(filter(None, [
+                s.player.first_name, s.player.second_name,
+                s.player.first_surname, s.player.second_surname,
+            ])).strip()
+            row = {
+                "player_id": s.player_id,
+                "player_name": full_name,
+                "team_id": s.team_id,
+                "team_name": team.name if team else "",
+                "goals": 0,
+                "matches_played": 0,
+            }
+            agg[s.player_id] = row
+        row["goals"] += s.goals
+        row["matches_played"] += 1
+
+    return sorted(
+        agg.values(),
+        key=lambda r: (r["goals"], -r["matches_played"]),
+        reverse=True,
+    )
+
+
 # ─── BRACKET ─────────────────────────────────────────────────────────────────
 
 @router.get("/{tournament_id}/bracket")

@@ -247,7 +247,7 @@ export default function BracketPage() {
         </Button>
         <h1 className="text-3xl font-bold flex items-center gap-2">
           <Trophy className="h-7 w-7" />
-          Bracket
+          Eliminatorias
         </h1>
       </div>
 

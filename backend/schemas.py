@@ -323,3 +323,12 @@ class StandingRow(BaseModel):
     goals_against: int = 0
     goal_difference: int = 0
     points: int = 0
+
+
+class ScorerRow(BaseModel):
+    player_id: int
+    player_name: str
+    team_id: int
+    team_name: str
+    goals: int
+    matches_played: int
