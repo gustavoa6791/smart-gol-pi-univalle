@@ -12,16 +12,24 @@ import {
   PanelLeftClose,
   Trophy,
   CalendarDays,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useCurrentUser, isAdmin, clearCurrentUserCache } from "@/lib/useCurrentUser";
 
-const navItems = [
+const baseNavItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/players", label: "Jugadores", icon: Users },
   { href: "/teams", label: "Equipos", icon: Trophy },
   { href: "/tournaments/templates", label: "Plantillas", icon: CalendarDays },
   { href: "/tournaments/manage", label: "Torneos", icon: Trophy },
 ];
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: "Administrador",
+  organizer: "Organizador",
+  viewer: "Consultor",
+};
 
 interface SidebarProps {
   collapsed: boolean;
@@ -31,8 +39,14 @@ interface SidebarProps {
 export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { user } = useCurrentUser();
+
+  const navItems = isAdmin(user?.role)
+    ? [...baseNavItems, { href: "/users", label: "Usuarios", icon: Shield }]
+    : baseNavItems;
 
   function logout() {
+    clearCurrentUserCache();
     localStorage.removeItem("access_token");
     document.cookie = "access_token=; path=/; max-age=0";
     toast.success("Sesión cerrada");
@@ -96,6 +110,13 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
 
       {/* Footer */}
       <div className="py-4 px-3 flex flex-col gap-2">
+        {user && !collapsed && (
+          <div className="px-2 py-2 rounded-md bg-green-50 border border-green-200 text-xs">
+            <p className="font-semibold text-gray-900 truncate">{user.name}</p>
+            <p className="text-gray-600 truncate">{user.email}</p>
+            <p className="mt-1 text-green-700 font-bold">{ROLE_LABELS[user.role] || user.role}</p>
+          </div>
+        )}
         {/* Logout */}
         <button
           onClick={logout}

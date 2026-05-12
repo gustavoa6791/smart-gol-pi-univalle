@@ -41,7 +41,7 @@ def list_players(
 def create_player(
     player_data: schemas.PlayerCreate,
     db: Session = Depends(get_db),
-    _: models.User = Depends(auth_utils.get_current_user),
+    _: models.User = Depends(auth_utils.require_admin_or_organizer),
 ):
     player = models.Player(**player_data.model_dump())
     db.add(player)
@@ -67,7 +67,7 @@ def update_player(
     player_id: int,
     player_data: schemas.PlayerUpdate,
     db: Session = Depends(get_db),
-    _: models.User = Depends(auth_utils.get_current_user),
+    _: models.User = Depends(auth_utils.require_admin_or_organizer),
 ):
     player = db.query(models.Player).filter(models.Player.id == player_id).first()
     if not player:
@@ -83,7 +83,7 @@ def update_player(
 def delete_player(
     player_id: int,
     db: Session = Depends(get_db),
-    _: models.User = Depends(auth_utils.get_current_user),
+    _: models.User = Depends(auth_utils.require_admin),
 ):
     player = db.query(models.Player).filter(models.Player.id == player_id).first()
     if not player:
@@ -100,7 +100,7 @@ async def upload_photo(
     player_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _: models.User = Depends(auth_utils.get_current_user),
+    _: models.User = Depends(auth_utils.require_admin_or_organizer),
 ):
     player = db.query(models.Player).filter(models.Player.id == player_id).first()
     if not player:
@@ -132,7 +132,7 @@ async def upload_photo(
 def delete_photo(
     player_id: int,
     db: Session = Depends(get_db),
-    _: models.User = Depends(auth_utils.get_current_user),
+    _: models.User = Depends(auth_utils.require_admin),
 ):
     player = db.query(models.Player).filter(models.Player.id == player_id).first()
     if not player:
@@ -153,7 +153,7 @@ async def upload_document(
     player_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _: models.User = Depends(auth_utils.get_current_user),
+    _: models.User = Depends(auth_utils.require_admin_or_organizer),
 ):
     player = db.query(models.Player).filter(models.Player.id == player_id).first()
     if not player:
@@ -185,7 +185,7 @@ def delete_document(
     player_id: int,
     doc_id: int,
     db: Session = Depends(get_db),
-    _: models.User = Depends(auth_utils.get_current_user),
+    _: models.User = Depends(auth_utils.require_admin),
 ):
     doc = db.query(models.PlayerDocument).filter(
         models.PlayerDocument.id == doc_id,

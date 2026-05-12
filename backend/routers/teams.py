@@ -39,7 +39,7 @@ def list_teams(
 def create_team(
     team_data: schemas.TeamCreate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(auth_utils.get_current_user),
+    current_user: models.User = Depends(auth_utils.require_admin_or_organizer),
 ):
     # Validar que el nombre del equipo sea único (por categoría si aplica)
     query = db.query(models.Team).filter(models.Team.name == team_data.name)
@@ -108,7 +108,7 @@ def set_team_leader(
     team_id: int,
     body: schemas.SetLeaderBody,
     db: Session = Depends(get_db),
-    _: models.User = Depends(auth_utils.get_current_user),
+    _: models.User = Depends(auth_utils.require_admin_or_organizer),
 ):
     """Designar o quitar el líder del equipo. Solo un líder por equipo; debe estar en el equipo."""
     team = _teams_query(db).filter(models.Team.id == team_id).first()
@@ -136,7 +136,7 @@ def update_team(
     team_id: int,
     team_data: schemas.TeamUpdate,
     db: Session = Depends(get_db),
-    _: models.User = Depends(auth_utils.get_current_user),
+    _: models.User = Depends(auth_utils.require_admin_or_organizer),
 ):
     team = db.query(models.Team).filter(models.Team.id == team_id).first()
     if not team:
@@ -195,7 +195,7 @@ async def upload_shield(
     team_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _: models.User = Depends(auth_utils.get_current_user),
+    _: models.User = Depends(auth_utils.require_admin_or_organizer),
 ):
     team = db.query(models.Team).filter(models.Team.id == team_id).first()
     if not team:
@@ -226,7 +226,7 @@ async def upload_shield(
 def delete_shield(
     team_id: int,
     db: Session = Depends(get_db),
-    _: models.User = Depends(auth_utils.get_current_user),
+    _: models.User = Depends(auth_utils.require_admin),
 ):
     team = db.query(models.Team).filter(models.Team.id == team_id).first()
     if not team:
@@ -246,7 +246,7 @@ def delete_shield(
 def delete_team(
     team_id: int,
     db: Session = Depends(get_db),
-    _: models.User = Depends(auth_utils.get_current_user),
+    _: models.User = Depends(auth_utils.require_admin),
 ):
     team = db.query(models.Team).filter(models.Team.id == team_id).first()
     if not team:

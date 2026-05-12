@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
+import { useCurrentUser, canWrite } from "@/lib/useCurrentUser";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -51,6 +52,8 @@ interface MatchDetail {
 export default function MatchDetailPage() {
   const { id: tournamentId, matchId } = useParams();
   const router = useRouter();
+  const { user } = useCurrentUser();
+  const writeAllowed = canWrite(user?.role);
   const [match, setMatch] = useState<MatchDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -337,16 +340,18 @@ export default function MatchDetailPage() {
       </Card>
 
       {/* Botón guardar */}
-      <div className="flex justify-end">
-        <Button size="lg" onClick={handleSave} disabled={saving}>
-          {saving ? (
-            <Loader2 className="h-5 w-5 animate-spin mr-2" />
-          ) : (
-            <Save className="h-5 w-5 mr-2" />
-          )}
-          Guardar resultado
-        </Button>
-      </div>
+      {writeAllowed && (
+        <div className="flex justify-end">
+          <Button size="lg" onClick={handleSave} disabled={saving}>
+            {saving ? (
+              <Loader2 className="h-5 w-5 animate-spin mr-2" />
+            ) : (
+              <Save className="h-5 w-5 mr-2" />
+            )}
+            Guardar resultado
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

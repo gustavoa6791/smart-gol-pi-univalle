@@ -9,6 +9,7 @@ import {
   TournamentTemplateCreate,
   TournamentType,
 } from "@/lib/types";
+import { useCurrentUser, canWrite, isAdmin } from "@/lib/useCurrentUser";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +50,9 @@ const emptyForm: TournamentTemplateCreate = {
 };
 
 export default function TemplatesPage() {
+  const { user } = useCurrentUser();
+  const writeAllowed = canWrite(user?.role);
+  const adminAllowed = isAdmin(user?.role);
   const [templates, setTemplates] = useState<TournamentTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -107,10 +111,12 @@ export default function TemplatesPage() {
             Configura formatos reutilizables para tus torneos
           </p>
         </div>
+        {writeAllowed && (
         <Button onClick={() => { setForm({ ...emptyForm }); setOpen(true); }} className="gap-2 bg-gradient-to-r from-green-500 via-green-600 to-green-700 hover:from-green-600 hover:via-green-700 hover:to-green-800 text-white font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
           <Plus className="h-4 w-4" />
           Nueva plantilla
         </Button>
+        )}
       </div>
 
       {/* Table Card */}
@@ -163,9 +169,11 @@ export default function TemplatesPage() {
                     )}
                   </TableCell>
                   <TableCell className="text-right py-2 px-2">
+                    {adminAllowed && (
                     <Button size="icon" variant="ghost" className="text-destructive" onClick={() => handleDelete(t.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

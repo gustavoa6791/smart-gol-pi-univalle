@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -103,14 +102,8 @@ export default function LoginPage() {
               </Button>
             </form>
           </CardContent>
-          <CardFooter className="flex justify-center text-sm text-muted-foreground">
-            ¿No tienes cuenta?&nbsp;
-            <Link
-              href="/register"
-              className="font-medium text-primary hover:underline"
-            >
-              Regístrate
-            </Link>
+          <CardFooter className="flex justify-center text-sm text-muted-foreground text-center">
+            Solo los administradores pueden crear nuevas cuentas.
           </CardFooter>
         </Card>
       </div>

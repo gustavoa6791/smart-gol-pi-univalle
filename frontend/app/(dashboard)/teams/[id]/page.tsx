@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { Team, Player } from "@/lib/types";
+import { useCurrentUser, canWrite, isAdmin } from "@/lib/useCurrentUser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,6 +42,9 @@ const POSITION_LABELS: Record<string, string> = {
 export default function TeamDetailPage() {
   const { id } = useParams();
   const router = useRouter();
+  const { user } = useCurrentUser();
+  const writeAllowed = canWrite(user?.role);
+  const adminAllowed = isAdmin(user?.role);
   const shieldInputRef = useRef<HTMLInputElement>(null);
 
   const [team, setTeam] = useState<Team | null>(null);
@@ -242,32 +246,36 @@ export default function TeamDetailPage() {
           <h1 className="text-2xl font-bold truncate bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">{team.name}</h1>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            type="submit"
-            form="team-form"
-            disabled={saving}
-            size="sm"
-            className="gap-2 bg-gradient-to-r from-green-500 via-green-600 to-green-700 hover:from-green-600 hover:via-green-700 hover:to-green-800 text-white font-bold shadow-lg hover:shadow-xl transition-all"
-          >
-            {saving ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <Save className="h-4 w-4 mr-2" />
-            )}
-            Guardar cambios
-          </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={handleDelete}
-            disabled={deleting}
-          >
-            {deleting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Trash2 className="h-4 w-4" />
-            )}
-          </Button>
+          {writeAllowed && (
+            <Button
+              type="submit"
+              form="team-form"
+              disabled={saving}
+              size="sm"
+              className="gap-2 bg-gradient-to-r from-green-500 via-green-600 to-green-700 hover:from-green-600 hover:via-green-700 hover:to-green-800 text-white font-bold shadow-lg hover:shadow-xl transition-all"
+            >
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Guardar cambios
+            </Button>
+          )}
+          {adminAllowed && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -296,21 +304,23 @@ export default function TeamDetailPage() {
               className="hidden"
               onChange={handleShieldUpload}
             />
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full"
-              onClick={() => shieldInputRef.current?.click()}
-              disabled={uploadingShield}
-            >
-              {uploadingShield ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-1" />
-              ) : (
-                <Upload className="h-4 w-4 mr-1" />
-              )}
-              {team.shield_url ? "Cambiar" : "Subir escudo"}
-            </Button>
-            {team.shield_url && (
+            {writeAllowed && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full"
+                onClick={() => shieldInputRef.current?.click()}
+                disabled={uploadingShield}
+              >
+                {uploadingShield ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                ) : (
+                  <Upload className="h-4 w-4 mr-1" />
+                )}
+                {team.shield_url ? "Cambiar" : "Subir escudo"}
+              </Button>
+            )}
+            {team.shield_url && adminAllowed && (
               <Button
                 size="sm"
                 variant="ghost"
@@ -360,10 +370,12 @@ export default function TeamDetailPage() {
       <Card className="shadow-xl border-2 border-green-200 bg-white overflow-hidden pt-0 gap-0">
         <CardHeader className="flex flex-row items-center justify-between bg-gradient-to-r from-green-50 to-green-100 py-4">
           <CardTitle>Plantilla de jugadores</CardTitle>
-          <Button size="sm" variant="outline" onClick={openSearchModal} className="border-2 border-green-500 text-green-700 hover:bg-green-500 hover:text-white font-semibold shadow-sm hover:shadow-md transition-all">
-            <Plus className="h-4 w-4 mr-1" />
-            Agregar jugador
-          </Button>
+          {writeAllowed && (
+            <Button size="sm" variant="outline" onClick={openSearchModal} className="border-2 border-green-500 text-green-700 hover:bg-green-500 hover:text-white font-semibold shadow-sm hover:shadow-md transition-all">
+              <Plus className="h-4 w-4 mr-1" />
+              Agregar jugador
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="pt-4">
           {teamPlayers.length === 0 ? (
@@ -399,36 +411,38 @@ export default function TeamDetailPage() {
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    {leaderId !== player.id ? (
+                  {writeAllowed && (
+                    <div className="flex items-center gap-2">
+                      {leaderId !== player.id ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                          onClick={() => setLeaderId(player.id)}
+                        >
+                          <UserRound className="h-3.5 w-3.5 mr-1" />
+                          Hacer lider
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-muted-foreground"
+                          onClick={() => setLeaderId(null)}
+                        >
+                          Quitar lider
+                        </Button>
+                      )}
                       <Button
-                        size="sm"
+                        size="icon"
                         variant="ghost"
-                        className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                        onClick={() => setLeaderId(player.id)}
+                        className="text-destructive shrink-0"
+                        onClick={() => removePlayer(player.id)}
                       >
-                        <UserRound className="h-3.5 w-3.5 mr-1" />
-                        Hacer lider
+                        <X className="h-4 w-4" />
                       </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-muted-foreground"
-                        onClick={() => setLeaderId(null)}
-                      >
-                        Quitar lider
-                      </Button>
-                    )}
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="text-destructive shrink-0"
-                      onClick={() => removePlayer(player.id)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

@@ -57,3 +57,19 @@ def get_current_user(
     if user is None:
         raise credentials_exception
     return user
+
+
+def require_roles(*allowed_roles: models.UserRole):
+    """Dependency factory: solo usuarios con uno de los roles permitidos pueden acceder."""
+    def _checker(current_user: models.User = Depends(get_current_user)) -> models.User:
+        if current_user.role not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permisos para realizar esta accion",
+            )
+        return current_user
+    return _checker
+
+
+require_admin = require_roles(models.UserRole.admin)
+require_admin_or_organizer = require_roles(models.UserRole.admin, models.UserRole.organizer)

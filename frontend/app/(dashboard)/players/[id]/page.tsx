@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { Player, PlayerDocument } from "@/lib/types";
+import { useCurrentUser, canWrite, isAdmin } from "@/lib/useCurrentUser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,6 +40,9 @@ const BACKEND = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 export default function PlayerDetailPage() {
   const { id } = useParams();
   const router = useRouter();
+  const { user } = useCurrentUser();
+  const writeAllowed = canWrite(user?.role);
+  const adminAllowed = isAdmin(user?.role);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
 
@@ -198,18 +202,22 @@ export default function PlayerDetailPage() {
           <h1 className="text-2xl font-bold truncate bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">{fullName}</h1>
         </div>
         <div className="flex items-center gap-2">
-          <Button type="submit" form="player-form" disabled={saving} size="sm" className="gap-2 bg-gradient-to-r from-green-500 via-green-600 to-green-700 hover:from-green-600 hover:via-green-700 hover:to-green-800 text-white font-bold shadow-lg hover:shadow-xl transition-all">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-            Guardar cambios
-          </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={handleDelete}
-            disabled={deleting}
-          >
-            {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-          </Button>
+          {writeAllowed && (
+            <Button type="submit" form="player-form" disabled={saving} size="sm" className="gap-2 bg-gradient-to-r from-green-500 via-green-600 to-green-700 hover:from-green-600 hover:via-green-700 hover:to-green-800 text-white font-bold shadow-lg hover:shadow-xl transition-all">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+              Guardar cambios
+            </Button>
+          )}
+          {adminAllowed && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -238,21 +246,23 @@ export default function PlayerDetailPage() {
               className="hidden"
               onChange={handlePhotoUpload}
             />
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full"
-              onClick={() => photoInputRef.current?.click()}
-              disabled={uploadingPhoto}
-            >
-              {uploadingPhoto ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-1" />
-              ) : (
-                <Upload className="h-4 w-4 mr-1" />
-              )}
-              {player.photo_url ? "Cambiar" : "Subir foto"}
-            </Button>
-            {player.photo_url && (
+            {writeAllowed && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full"
+                onClick={() => photoInputRef.current?.click()}
+                disabled={uploadingPhoto}
+              >
+                {uploadingPhoto ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                ) : (
+                  <Upload className="h-4 w-4 mr-1" />
+                )}
+                {player.photo_url ? "Cambiar" : "Subir foto"}
+              </Button>
+            )}
+            {player.photo_url && adminAllowed && (
               <Button
                 size="sm"
                 variant="ghost"
@@ -405,20 +415,22 @@ export default function PlayerDetailPage() {
               className="hidden"
               onChange={handleDocUpload}
             />
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-2 border-green-500 text-green-700 hover:bg-green-500 hover:text-white font-semibold shadow-sm hover:shadow-md transition-all"
-              onClick={() => docInputRef.current?.click()}
-              disabled={uploadingDoc}
-            >
-              {uploadingDoc ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-1" />
-              ) : (
-                <Upload className="h-4 w-4 mr-1" />
-              )}
-              Subir documento
-            </Button>
+            {writeAllowed && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-2 border-green-500 text-green-700 hover:bg-green-500 hover:text-white font-semibold shadow-sm hover:shadow-md transition-all"
+                onClick={() => docInputRef.current?.click()}
+                disabled={uploadingDoc}
+              >
+                {uploadingDoc ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                ) : (
+                  <Upload className="h-4 w-4 mr-1" />
+                )}
+                Subir documento
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="pt-4">
@@ -444,14 +456,16 @@ export default function PlayerDetailPage() {
                       {doc.original_name}
                     </a>
                   </div>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="text-destructive shrink-0"
-                    onClick={() => handleDeleteDoc(doc.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {adminAllowed && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="text-destructive shrink-0"
+                      onClick={() => handleDeleteDoc(doc.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>

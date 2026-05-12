@@ -6,10 +6,17 @@ from datetime import datetime, date
 
 # ─── Auth Schemas ────────────────────────────────────────────────────────────
 
+class UserRoleEnum(str, Enum):
+    admin = "admin"
+    organizer = "organizer"
+    viewer = "viewer"
+
+
 class UserRegister(BaseModel):
     name: str
     email: EmailStr
     password: str
+    role: Optional[UserRoleEnum] = UserRoleEnum.viewer
 
 
 class UserLogin(BaseModel):
@@ -21,10 +28,15 @@ class UserOut(BaseModel):
     id: int
     name: str
     email: str
+    role: UserRoleEnum
     created_at: datetime
 
     class Config:
         from_attributes = True
+
+
+class UserRoleUpdate(BaseModel):
+    role: UserRoleEnum
 
 
 class Token(BaseModel):

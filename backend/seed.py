@@ -12,22 +12,32 @@ from auth import hash_password
 def seed_data():
     db = SessionLocal()
     try:
-        # 1. Seed User
-        admin_email = "admin@smartgol.com"
-        existing_user = db.query(models.User).filter(models.User.email == admin_email).first()
-        
-        if not existing_user:
-            print("🌱 Seeding admin user...")
-            admin_user = models.User(
-                name="Admin Smart Gol",
-                email=admin_email,
-                hashed_password=hash_password("admin123")
-            )
-            db.add(admin_user)
-            db.commit()
-            print("✅ Admin user created (admin@smartgol.com / admin123)")
-        else:
-            print("ℹ️ Admin user already exists")
+        # 1. Seed Users (admin original + admin/organizer/viewer demo)
+        users_to_seed = [
+            ("Admin Smart Gol", "admin@smartgol.com", "admin123", models.UserRole.admin),
+            ("Admin Demo", "admin@email.com", "admin123", models.UserRole.admin),
+            ("Organizador Demo", "organizer@email.com", "organizer123", models.UserRole.organizer),
+            ("Viewer Demo", "viewer@email.com", "viewer123", models.UserRole.viewer),
+        ]
+
+        for name, email, password, role in users_to_seed:
+            user = db.query(models.User).filter(models.User.email == email).first()
+            if user is None:
+                db.add(models.User(
+                    name=name,
+                    email=email,
+                    hashed_password=hash_password(password),
+                    role=role,
+                ))
+                print(f"✅ Usuario creado: {email} / {password} ({role.value})")
+            else:
+                # Asegurar que el rol este correcto si el usuario ya existe
+                if user.role != role:
+                    user.role = role
+                    print(f"🔄 Rol actualizado para {email} -> {role.value}")
+                else:
+                    print(f"ℹ️ Usuario ya existe: {email} ({role.value})")
+        db.commit()
 
         # 2. Seed Players
         if db.query(models.Player).count() == 0:

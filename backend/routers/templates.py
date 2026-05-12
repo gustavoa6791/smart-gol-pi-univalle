@@ -20,7 +20,7 @@ def list_templates(
 def create_template(
     data: schemas.TournamentTemplateCreate,
     db: Session = Depends(get_db),
-    _: models.User = Depends(auth_utils.get_current_user),
+    _: models.User = Depends(auth_utils.require_admin_or_organizer),
 ):
     if not data.name.strip():
         raise HTTPException(status_code=400, detail="El nombre es requerido")
@@ -67,7 +67,7 @@ def create_template(
 def delete_template(
     template_id: int,
     db: Session = Depends(get_db),
-    _: models.User = Depends(auth_utils.get_current_user),
+    _: models.User = Depends(auth_utils.require_admin),
 ):
     template = db.query(models.TournamentTemplate).filter(
         models.TournamentTemplate.id == template_id

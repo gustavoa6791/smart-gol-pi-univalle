@@ -8,6 +8,7 @@ import api from "@/lib/api";
 import {
   Tournament, TournamentCreate, TournamentTemplate, Team, TournamentType,
 } from "@/lib/types";
+import { useCurrentUser, canWrite, isAdmin } from "@/lib/useCurrentUser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,6 +35,9 @@ const TYPE_COLORS: Record<TournamentType, string> = {
 
 export default function TournamentManagePage() {
   const router = useRouter();
+  const { user } = useCurrentUser();
+  const writeAllowed = canWrite(user?.role);
+  const adminAllowed = isAdmin(user?.role);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [templates, setTemplates] = useState<TournamentTemplate[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -186,10 +190,12 @@ export default function TournamentManagePage() {
             Crea y administra los torneos
           </p>
         </div>
-        <Button onClick={() => setCreateOpen(true)} className="gap-2 bg-gradient-to-r from-green-500 via-green-600 to-green-700 hover:from-green-600 hover:via-green-700 hover:to-green-800 text-white font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
-          <Plus className="h-4 w-4" />
-          Crear torneo
-        </Button>
+        {writeAllowed && (
+          <Button onClick={() => setCreateOpen(true)} className="gap-2 bg-gradient-to-r from-green-500 via-green-600 to-green-700 hover:from-green-600 hover:via-green-700 hover:to-green-800 text-white font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
+            <Plus className="h-4 w-4" />
+            Crear torneo
+          </Button>
+        )}
       </div>
 
       {/* Table Card */}
@@ -234,13 +240,13 @@ export default function TournamentManagePage() {
                     </TableCell>
                     <TableCell className="py-2 px-2">
                       <div className="flex flex-wrap gap-2">
-                        {!hasTeams && (
+                        {!hasTeams && writeAllowed && (
                           <Button size="sm" variant="outline" onClick={() => openAssignTeams(t)}>
                             Asignar equipos
                           </Button>
                         )}
 
-                        {!hasFixture && (
+                        {!hasFixture && writeAllowed && (
                           <Button size="sm" variant="outline" onClick={() => generateFixture(t.id)}>
                             Generar fixture
                           </Button>
@@ -272,7 +278,7 @@ export default function TournamentManagePage() {
                               Goleadores
                             </Button>
 
-                            {type === "mixed" && !advancedMap[t.id] && (
+                            {type === "mixed" && !advancedMap[t.id] && writeAllowed && (
                               <Button size="sm" variant="outline"
                                 onClick={() => advanceToKnockout(t.id)}>
                                 Avanzar a eliminatoria
@@ -283,10 +289,12 @@ export default function TournamentManagePage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right py-2 px-2">
+                      {adminAllowed && (
                       <Button size="icon" variant="ghost" className="text-destructive"
                         onClick={() => deleteTournament(t.id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 );

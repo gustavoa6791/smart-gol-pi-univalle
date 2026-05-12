@@ -26,7 +26,7 @@ def list_tournaments(
 def create_tournament(
     tournament_data: schemas.TournamentCreate,
     db: Session = Depends(get_db),
-    _: models.User = Depends(auth_utils.get_current_user),
+    _: models.User = Depends(auth_utils.require_admin_or_organizer),
 ):
     template = db.query(models.TournamentTemplate).filter(
         models.TournamentTemplate.id == tournament_data.template_id
@@ -61,7 +61,7 @@ def get_tournament(
 def delete_tournament(
     tournament_id: int,
     db: Session = Depends(get_db),
-    _: models.User = Depends(auth_utils.get_current_user),
+    _: models.User = Depends(auth_utils.require_admin),
 ):
     tournament = db.query(models.Tournament).filter(
         models.Tournament.id == tournament_id
@@ -85,7 +85,7 @@ def add_teams_to_tournament(
     tournament_id: int,
     body: schemas.TournamentTeamAssign,
     db: Session = Depends(get_db),
-    _: models.User = Depends(auth_utils.get_current_user),
+    _: models.User = Depends(auth_utils.require_admin_or_organizer),
 ):
     tournament = db.query(models.Tournament).filter(
         models.Tournament.id == tournament_id
@@ -139,7 +139,7 @@ def _min_teams_for_type(template):
 def generate_tournament_fixture(
     tournament_id: int,
     db: Session = Depends(get_db),
-    _: models.User = Depends(auth_utils.get_current_user),
+    _: models.User = Depends(auth_utils.require_admin_or_organizer),
 ):
     tournament = db.query(models.Tournament).options(
         selectinload(models.Tournament.template)
@@ -410,7 +410,7 @@ def update_match_score(
     match_id: int,
     body: schemas.MatchUpdateScore,
     db: Session = Depends(get_db),
-    _: models.User = Depends(auth_utils.get_current_user),
+    _: models.User = Depends(auth_utils.require_admin_or_organizer),
 ):
     match = db.query(models.Match).filter(models.Match.id == match_id).first()
     if not match:
@@ -458,7 +458,7 @@ def save_match_stats(
     match_id: int,
     body: schemas.SaveMatchStats,
     db: Session = Depends(get_db),
-    _: models.User = Depends(auth_utils.get_current_user),
+    _: models.User = Depends(auth_utils.require_admin_or_organizer),
 ):
     match = db.query(models.Match).filter(models.Match.id == match_id).first()
     if not match:
@@ -519,7 +519,7 @@ def save_match_stats(
 def advance_to_knockout(
     tournament_id: int,
     db: Session = Depends(get_db),
-    _: models.User = Depends(auth_utils.get_current_user),
+    _: models.User = Depends(auth_utils.require_admin_or_organizer),
 ):
     tournament = db.query(models.Tournament).options(
         selectinload(models.Tournament.template)

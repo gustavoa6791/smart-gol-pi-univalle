@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { Player } from "@/lib/types";
+import { useCurrentUser, canWrite } from "@/lib/useCurrentUser";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -49,6 +50,8 @@ function calcAge(birth_date?: string) {
 
 export default function PlayersPage() {
   const router = useRouter();
+  const { user } = useCurrentUser();
+  const writeAllowed = canWrite(user?.role);
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -91,10 +94,12 @@ export default function PlayersPage() {
             Gestiona los jugadores del club
           </p>
         </div>
-        <Button onClick={() => router.push("/players/new")} className="gap-2 bg-gradient-to-r from-green-500 via-green-600 to-green-700 hover:from-green-600 hover:via-green-700 hover:to-green-800 text-white font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
-          <Plus className="h-4 w-4" />
-          Nuevo jugador
-        </Button>
+        {writeAllowed && (
+          <Button onClick={() => router.push("/players/new")} className="gap-2 bg-gradient-to-r from-green-500 via-green-600 to-green-700 hover:from-green-600 hover:via-green-700 hover:to-green-800 text-white font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
+            <Plus className="h-4 w-4" />
+            Nuevo jugador
+          </Button>
+        )}
       </div>
 
       {/* Buscador */}
