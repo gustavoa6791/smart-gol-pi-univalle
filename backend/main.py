@@ -21,13 +21,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from routers import auth, players, teams, templates, tournaments, public
+from routers import auth, players, teams, templates, tournaments, public, tts
 app.include_router(auth.router)
 app.include_router(players.router)
 app.include_router(teams.router)
 app.include_router(templates.router)
 app.include_router(tournaments.router)
 app.include_router(public.router)
+app.include_router(tts.router)
 
 # Servir archivos subidos como estáticos
 UPLOAD_DIR = "/app/uploads"

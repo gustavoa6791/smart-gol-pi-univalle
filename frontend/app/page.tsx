@@ -13,6 +13,7 @@ import {
   Trophy, Users, Target, CalendarDays, Loader2, ListChecks, ShieldCheck, Activity,
 } from "lucide-react";
 import { PublicHeader } from "@/components/public-header";
+import { Volume2 } from "lucide-react";
 
 interface PublicStats {
   total_players: number;
@@ -81,6 +82,47 @@ export default function LandingPage() {
   const [loadingDetail, setLoadingDetail] = useState(false);
 
   const selected = tournaments.find((t) => t.id === selectedId) || null;
+
+  const handleSpeakMatches = async () => {
+    if (!selected) return;
+
+    const upcomingMatches = matches.filter(
+      (m) => m.status !== "played"
+    );
+
+    if (upcomingMatches.length === 0) {
+      alert("No hay partidos pendientes");
+      return;
+    }
+
+    let text = `Próximos partidos de ${selected.name}. `;
+
+    upcomingMatches.slice(0, 2).forEach((m, index) => {
+      text += `Partido ${index + 1}. `;
+      text += `${m.home_team} contra ${m.away_team}. `;
+    });
+
+    const response = await fetch(
+      "http://localhost:8000/tts/generate",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          text,
+        }),
+      }
+    );
+
+    const blob = await response.blob();
+
+    const url = URL.createObjectURL(blob);
+
+    const audio = new Audio(url);
+
+    audio.play();
+  };
 
   useEffect(() => {
     Promise.all([
@@ -213,23 +255,41 @@ export default function LandingPage() {
               <CardContent className="p-2 space-y-1 overflow-y-auto h-full">
                 {tournaments.map((t) => {
                   const active = t.id === selectedId;
+
                   return (
-                    <button
-                      key={t.id}
-                      onClick={() => setSelectedId(t.id)}
-                      className={`w-full text-left px-2 py-1.5 rounded text-sm font-medium transition-all ${
-                        active
-                          ? "bg-gradient-to-r from-green-500 to-green-700 text-white shadow"
-                          : "text-gray-700 hover:bg-green-50"
-                      }`}
-                    >
-                      <div className="truncate">{t.name}</div>
-                      {t.type && (
-                        <div className={`text-xs mt-0.5 ${active ? "text-white/80" : "text-muted-foreground"}`}>
-                          {TYPE_LABELS[t.type] || t.type}
-                        </div>
+                    <div key={t.id} className="space-y-1">
+                      <button
+                        onClick={() => setSelectedId(t.id)}
+                        className={`w-full text-left px-2 py-1.5 rounded text-sm font-medium transition-all ${
+                          active
+                            ? "bg-gradient-to-r from-green-500 to-green-700 text-white shadow"
+                            : "text-gray-700 hover:bg-green-50"
+                        }`}
+                      >
+                        <div className="truncate">{t.name}</div>
+
+                        {t.type && (
+                          <div
+                            className={`text-xs mt-0.5 ${
+                              active ? "text-white/80" : "text-muted-foreground"
+                            }`}
+                          >
+                            {TYPE_LABELS[t.type] || t.type}
+                          </div>
+                        )}
+                      </button>
+
+                      {active && (
+                        <Button
+                          size="sm"
+                          onClick={handleSpeakMatches}
+                          className="w-full flex items-center gap-2"
+                        >
+                          <Volume2 className="h-4 w-4" />
+                          Escuchar próximos partidos
+                        </Button>
                       )}
-                    </button>
+                    </div>
                   );
                 })}
               </CardContent>
