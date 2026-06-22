@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
-import { PlayerCreate } from "@/lib/types";
+import type { PlayerCreate } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Mic, Square } from "lucide-react";
 import { toast } from "sonner";
 
 const POSITIONS = [
@@ -24,6 +24,23 @@ const DOC_TYPES = [
   { value: "CE", label: "Cédula de Extranjería (CE)" },
   { value: "PA", label: "Pasaporte (PA)" },
 ];
+
+// Etiquetas legibles para el resumen de "qué reconoció la voz"
+const FIELD_LABELS: Record<string, string> = {
+  first_name: "Primer nombre",
+  second_name: "Segundo nombre",
+  first_surname: "Primer apellido",
+  second_surname: "Segundo apellido",
+  document_type: "Tipo de documento",
+  document_number: "Número de documento",
+  position: "Posición",
+  birth_date: "Fecha de nacimiento",
+  phone: "Teléfono",
+  email: "Correo",
+  address: "Dirección",
+  gender: "Género",
+  notes: "Notas",
+};
 
 export default function NewPlayerPage() {
   const router = useRouter();
@@ -44,8 +61,121 @@ export default function NewPlayerPage() {
     notes: "",
   });
 
-  const set = (field: keyof PlayerCreate, value: string) =>
+  // ── Estado del dictado por voz (STT) ──────────────────────────────────────
+  const [listening, setListening] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [liveText, setLiveText] = useState("");
+  const [recognized, setRecognized] = useState<Set<string>>(new Set());
+  const recognizerRef = useRef<{ stopContinuousRecognitionAsync: (cb: () => void, err: (e: unknown) => void) => void; close: () => void } | null>(null);
+  const transcriptRef = useRef("");
+
+  const set = (field: keyof PlayerCreate, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value || undefined }));
+    // Si el usuario corrige a mano un campo que llenó la voz, le quitamos el resaltado.
+    setRecognized((prev) => {
+      if (!prev.has(field)) return prev;
+      const next = new Set(prev);
+      next.delete(field);
+      return next;
+    });
+  };
+
+  // Resaltado verde para los campos que rellenó la voz (aún sin revisar)
+  const voiceClass = (field: keyof PlayerCreate) =>
+    recognized.has(field) ? "ring-2 ring-green-400 bg-green-50/60" : "";
+
+  async function startListening() {
+    try {
+      const { data } = await api.get("/api/speech/token");
+      const SpeechSDK = await import("microsoft-cognitiveservices-speech-sdk");
+
+      const speechConfig = SpeechSDK.SpeechConfig.fromAuthorizationToken(
+        data.token,
+        data.region
+      );
+      speechConfig.speechRecognitionLanguage = "es-CO";
+
+      const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
+      const recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
+
+      transcriptRef.current = "";
+      setLiveText("");
+
+      recognizer.recognizing = (_s, e) => {
+        setLiveText((transcriptRef.current + " " + e.result.text).trim());
+      };
+      recognizer.recognized = (_s, e) => {
+        if (e.result.reason === SpeechSDK.ResultReason.RecognizedSpeech && e.result.text) {
+          transcriptRef.current = (transcriptRef.current + " " + e.result.text).trim();
+          setLiveText(transcriptRef.current);
+        }
+      };
+      recognizer.canceled = (_s, e) => {
+        toast.error("Reconocimiento cancelado: " + (e.errorDetails || "revisa el micrófono"));
+        stopListening();
+      };
+
+      recognizer.startContinuousRecognitionAsync(
+        () => setListening(true),
+        (err) => {
+          toast.error("No se pudo iniciar el micrófono");
+          console.error(err);
+        }
+      );
+      recognizerRef.current = recognizer as unknown as typeof recognizerRef.current;
+    } catch (err) {
+      console.error(err);
+      toast.error("No se pudo iniciar el dictado (¿permiso de micrófono?)");
+      setListening(false);
+    }
+  }
+
+  async function stopListening() {
+    const recognizer = recognizerRef.current;
+    setListening(false);
+    if (recognizer) {
+      await new Promise<void>((resolve) =>
+        recognizer.stopContinuousRecognitionAsync(
+          () => resolve(),
+          () => resolve()
+        )
+      );
+      recognizer.close();
+      recognizerRef.current = null;
+    }
+
+    const text = transcriptRef.current.trim();
+    if (!text) {
+      toast("No se captó audio. Intenta de nuevo.");
+      return;
+    }
+
+    setProcessing(true);
+    try {
+      const { data } = await api.post("/api/players/extract", { text });
+      const fields = (data.fields ?? {}) as Partial<PlayerCreate>;
+      const keys = Object.keys(fields);
+
+      setForm((prev) => ({ ...prev, ...fields }));
+      setRecognized(new Set(keys));
+
+      if (keys.length === 0) {
+        toast.warning("No reconocí ningún campo. Revisa la transcripción e intenta otra vez.");
+      } else {
+        const missing = ["first_name", "first_surname"].filter((k) => !keys.includes(k));
+        toast.success(
+          `Reconocí ${keys.length} campo(s): ${keys.map((k) => FIELD_LABELS[k] ?? k).join(", ")}` +
+            (missing.length
+              ? `. Falta(n): ${missing.map((k) => FIELD_LABELS[k]).join(", ")}`
+              : ". Revisa y corrige antes de guardar.")
+        );
+      }
+    } catch {
+      toast.error("Error al procesar la transcripción");
+    } finally {
+      setProcessing(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -79,11 +209,53 @@ export default function NewPlayerPage() {
           </Button>
           <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">Nuevo jugador</h1>
         </div>
-        <Button type="submit" disabled={saving} size="sm" className="gap-2 bg-gradient-to-r from-green-500 via-green-600 to-green-700 hover:from-green-600 hover:via-green-700 hover:to-green-800 text-white font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
-          {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-          Crear jugador
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Botón de dictado por voz — al lado de "Crear jugador" */}
+          <Button
+            type="button"
+            size="sm"
+            onClick={listening ? stopListening : startListening}
+            disabled={processing}
+            className={`gap-2 font-bold shadow-lg transition-all ${
+              listening
+                ? "bg-red-500 hover:bg-red-600 text-white animate-pulse"
+                : "bg-white text-green-700 border-2 border-green-500 hover:bg-green-50"
+            }`}
+            title={listening ? "Parar y rellenar el formulario" : "Dictar los datos del jugador"}
+          >
+            {processing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : listening ? (
+              <Square className="h-4 w-4" />
+            ) : (
+              <Mic className="h-4 w-4" />
+            )}
+            {processing ? "Procesando…" : listening ? "Listo" : "Dictar"}
+          </Button>
+          <Button type="submit" disabled={saving} size="sm" className="gap-2 bg-gradient-to-r from-green-500 via-green-600 to-green-700 hover:from-green-600 hover:via-green-700 hover:to-green-800 text-white font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
+            {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Crear jugador
+          </Button>
+        </div>
       </div>
+
+        {/* Banner de transcripción en vivo / ayuda */}
+        {(listening || processing || liveText) && (
+          <div className="rounded-lg border-2 border-green-300 bg-green-50 p-3 text-sm">
+            <div className="flex items-center gap-2 font-semibold text-green-800">
+              {listening ? (
+                <><Mic className="h-4 w-4 animate-pulse" /> Escuchando… (di nombre, posición, cédula, fecha de nacimiento, teléfono…)</>
+              ) : processing ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Procesando lo que dijiste…</>
+              ) : (
+                "Transcripción"
+              )}
+            </div>
+            <p className="mt-1 italic text-green-900 min-h-[1.25rem]">
+              {liveText || "Habla con naturalidad; al terminar pulsa “Listo” y rellenaré el formulario."}
+            </p>
+          </div>
+        )}
         {/* Nombres */}
         <Card className="shadow-xl border-2 border-green-200 bg-white overflow-hidden pt-0 gap-0">
           <CardHeader className="bg-gradient-to-r from-green-50 to-green-100 py-4">
@@ -97,6 +269,7 @@ export default function NewPlayerPage() {
                 onChange={(e) => set("first_name", e.target.value)}
                 placeholder="Juan"
                 required
+                className={voiceClass("first_name")}
               />
             </div>
             <div className="space-y-2">
@@ -105,6 +278,7 @@ export default function NewPlayerPage() {
                 value={form.second_name || ""}
                 onChange={(e) => set("second_name", e.target.value)}
                 placeholder="Carlos"
+                className={voiceClass("second_name")}
               />
             </div>
             <div className="space-y-2">
@@ -114,6 +288,7 @@ export default function NewPlayerPage() {
                 onChange={(e) => set("first_surname", e.target.value)}
                 placeholder="García"
                 required
+                className={voiceClass("first_surname")}
               />
             </div>
             <div className="space-y-2">
@@ -122,6 +297,7 @@ export default function NewPlayerPage() {
                 value={form.second_surname || ""}
                 onChange={(e) => set("second_surname", e.target.value)}
                 placeholder="López"
+                className={voiceClass("second_surname")}
               />
             </div>
             <div className="space-y-2">
@@ -130,6 +306,7 @@ export default function NewPlayerPage() {
                 type="date"
                 value={form.birth_date || ""}
                 onChange={(e) => set("birth_date", e.target.value)}
+                className={voiceClass("birth_date")}
               />
             </div>
             <div className="space-y-2">
@@ -138,6 +315,7 @@ export default function NewPlayerPage() {
                 value={form.phone || ""}
                 onChange={(e) => set("phone", e.target.value)}
                 placeholder="300 123 4567"
+                className={voiceClass("phone")}
               />
             </div>
             <div className="space-y-2">
@@ -147,12 +325,13 @@ export default function NewPlayerPage() {
                 value={form.email || ""}
                 onChange={(e) => set("email", e.target.value)}
                 placeholder="correo@ejemplo.com"
+                className={voiceClass("email")}
               />
             </div>
             <div className="space-y-2">
               <Label>Género</Label>
               <select
-                className="w-full border rounded-md p-2 text-sm"
+                className={`w-full border rounded-md p-2 text-sm ${voiceClass("gender")}`}
                 value={form.gender || ""}
                 onChange={(e) => set("gender", e.target.value)}
               >
@@ -168,6 +347,7 @@ export default function NewPlayerPage() {
                 value={form.address || ""}
                 onChange={(e) => set("address", e.target.value)}
                 placeholder="Calle 123 # 45-67"
+                className={voiceClass("address")}
               />
             </div>
           </CardContent>
@@ -182,7 +362,7 @@ export default function NewPlayerPage() {
             <div className="space-y-2">
               <Label>Tipo de documento</Label>
               <select
-                className="w-full border rounded-md p-2 text-sm"
+                className={`w-full border rounded-md p-2 text-sm ${voiceClass("document_type")}`}
                 value={form.document_type || ""}
                 onChange={(e) => set("document_type", e.target.value)}
               >
@@ -198,6 +378,7 @@ export default function NewPlayerPage() {
                 value={form.document_number || ""}
                 onChange={(e) => set("document_number", e.target.value)}
                 placeholder="1234567890"
+                className={voiceClass("document_number")}
               />
             </div>
           </CardContent>
@@ -212,7 +393,7 @@ export default function NewPlayerPage() {
             <div className="space-y-2">
               <Label>Posición</Label>
               <select
-                className="w-full border rounded-md p-2 text-sm"
+                className={`w-full border rounded-md p-2 text-sm ${voiceClass("position")}`}
                 value={form.position || ""}
                 onChange={(e) => set("position", e.target.value)}
               >
@@ -225,7 +406,7 @@ export default function NewPlayerPage() {
             <div className="space-y-2">
               <Label>Notas</Label>
               <textarea
-                className="w-full border rounded-md p-2 text-sm min-h-[80px]"
+                className={`w-full border rounded-md p-2 text-sm min-h-[80px] ${voiceClass("notes")}`}
                 value={form.notes || ""}
                 onChange={(e) => set("notes", e.target.value)}
                 placeholder="Observaciones adicionales..."
