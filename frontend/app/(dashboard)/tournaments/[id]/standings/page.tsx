@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Loader2, ArrowLeft, Trophy } from "lucide-react";
+import { Loader2, ArrowLeft, Trophy, Volume2 } from "lucide-react";
 import { toast } from "sonner";
+import { buildStandingsSpeech, speakText } from "@/lib/tts";
 
 interface StandingRow {
   team_id: number;
@@ -39,6 +40,7 @@ export default function StandingsPage() {
   const [loading, setLoading] = useState(true);
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [groups, setGroups] = useState<string[]>([]);
+  const [speaking, setSpeaking] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -150,14 +152,65 @@ export default function StandingsPage() {
 
   const isMixed = tournament?.template?.type === "mixed";
 
+  async function handleSpeakStandings() {
+    let text = "";
+
+    if (isMixed) {
+      if (groups.length === 0) {
+        toast.error("No hay grupos para leer");
+        return;
+      }
+      text = groups
+        .map((g) =>
+          buildStandingsSpeech(
+            groupStandings[g] || [],
+            `Grupo ${g}`
+          )
+        )
+        .join(" ");
+    } else {
+      if (standings.length === 0) {
+        toast.error("No hay posiciones para leer");
+        return;
+      }
+      text = buildStandingsSpeech(standings);
+    }
+
+    setSpeaking(true);
+    try {
+      await speakText(text);
+    } catch {
+      toast.error(
+        "No se pudo reproducir el audio. Verifica que Azure Speech esté configurado en el backend."
+      );
+    } finally {
+      setSpeaking(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="sm" onClick={() => router.push("/tournaments/manage")}>
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          Volver
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="sm" onClick={() => router.push("/tournaments/manage")}>
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Volver
+          </Button>
+          <h1 className="text-3xl font-bold">Tabla de posiciones</h1>
+        </div>
+        <Button
+          variant="outline"
+          onClick={handleSpeakStandings}
+          disabled={speaking || loading}
+          className="gap-2"
+        >
+          {speaking ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Volume2 className="h-4 w-4" />
+          )}
+          Escuchar posiciones
         </Button>
-        <h1 className="text-3xl font-bold">Tabla de posiciones</h1>
       </div>
 
       {isMixed ? (
