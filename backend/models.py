@@ -216,6 +216,7 @@ class MatchPlayerStat(Base):
     goals = Column(Integer, default=0, nullable=False)
     yellow_cards = Column(Integer, default=0, nullable=False)
     red_cards = Column(Integer, default=0, nullable=False)
+    jersey_number = Column(Integer, nullable=True)
 
     match = relationship("Match", back_populates="player_stats")
     player = relationship("Player")

@@ -479,6 +479,7 @@ def save_match_stats(
             goals=stat.goals,
             yellow_cards=stat.yellow_cards,
             red_cards=stat.red_cards,
+            jersey_number=stat.jersey_number,
         )
         db.add(db_stat)
         if stat.team_id == match.home_team_id:
