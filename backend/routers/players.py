@@ -5,10 +5,17 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session, selectinload
 from typing import List
 
+from pydantic import BaseModel
+
 from database import get_db
 import models, schemas, auth as auth_utils
+from services.player_extraction import extract_player_fields
 
 router = APIRouter(prefix="/api/players", tags=["players"])
+
+
+class PlayerExtractRequest(BaseModel):
+    text: str
 
 UPLOAD_DIR = "/app/uploads"
 PHOTOS_DIR = os.path.join(UPLOAD_DIR, "photos")
@@ -48,6 +55,20 @@ def create_player(
     db.commit()
     db.refresh(player)
     return _player_query(db).filter(models.Player.id == player.id).first()
+
+
+@router.post("/extract")
+def extract_player_from_speech(
+    payload: PlayerExtractRequest,
+    _: models.User = Depends(auth_utils.require_admin_or_organizer),
+):
+    """Recibe la transcripción del STT y devuelve los campos reconocidos.
+
+    Pluggable: hoy usa reglas en Python (gratis). Para subir a un LLM, cambiar
+    solo `extract_player_fields` en services/player_extraction.py.
+    """
+    fields = extract_player_fields(payload.text)
+    return {"fields": fields, "recognized": list(fields.keys())}
 
 
 @router.get("/{player_id}", response_model=schemas.PlayerOut)
