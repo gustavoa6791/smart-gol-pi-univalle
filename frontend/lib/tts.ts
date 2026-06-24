@@ -1,21 +1,97 @@
 import api from "./api";
 
-export async function speakText(text: string): Promise<void> {
-  const response = await api.post("/tts/generate", { text }, { responseType: "blob" });
-  const url = URL.createObjectURL(response.data);
-  const audio = new Audio(url);
+let currentAudio: HTMLAudioElement | null = null;
+let currentUrl: string | null = null;
+let abortController: AbortController | null = null;
+let onPlaybackEnd: (() => void) | null = null;
 
-  await new Promise<void>((resolve, reject) => {
-    audio.onended = () => {
-      URL.revokeObjectURL(url);
-      resolve();
-    };
-    audio.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error("No se pudo reproducir el audio"));
-    };
-    audio.play().catch(reject);
-  });
+function cleanupAudio() {
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio.onended = null;
+    currentAudio.onerror = null;
+    currentAudio.src = "";
+    currentAudio = null;
+  }
+  if (currentUrl) {
+    URL.revokeObjectURL(currentUrl);
+    currentUrl = null;
+  }
+}
+
+export function stopSpeech() {
+  abortController?.abort();
+  abortController = null;
+  cleanupAudio();
+  onPlaybackEnd?.();
+  onPlaybackEnd = null;
+}
+
+export function pauseSpeech() {
+  currentAudio?.pause();
+}
+
+export function resumeSpeech() {
+  void currentAudio?.play();
+}
+
+export function isSpeechPlaying(): boolean {
+  return currentAudio !== null && !currentAudio.paused;
+}
+
+export function isSpeechPaused(): boolean {
+  return currentAudio !== null && currentAudio.paused;
+}
+
+export function isSpeechActive(): boolean {
+  return currentAudio !== null;
+}
+
+export async function speakText(
+  text: string,
+  callbacks?: { onStart?: () => void }
+): Promise<void> {
+  stopSpeech();
+
+  abortController = new AbortController();
+  const signal = abortController.signal;
+
+  try {
+    const response = await api.post("/tts/generate", { text }, {
+      responseType: "blob",
+      signal,
+    });
+
+    if (signal.aborted) return;
+
+    currentUrl = URL.createObjectURL(response.data);
+    currentAudio = new Audio(currentUrl);
+
+    await new Promise<void>((resolve, reject) => {
+      onPlaybackEnd = resolve;
+
+      currentAudio!.onended = () => {
+        cleanupAudio();
+        onPlaybackEnd = null;
+        resolve();
+      };
+      currentAudio!.onerror = () => {
+        cleanupAudio();
+        onPlaybackEnd = null;
+        reject(new Error("No se pudo reproducir el audio"));
+      };
+      currentAudio!.play()
+        .then(() => callbacks?.onStart?.())
+        .catch(reject);
+    });
+  } catch (err: unknown) {
+    if (signal.aborted) return;
+    cleanupAudio();
+    onPlaybackEnd = null;
+    throw err;
+  } finally {
+    abortController = null;
+  }
 }
 
 export interface StandingSpeechRow {

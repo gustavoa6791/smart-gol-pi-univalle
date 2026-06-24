@@ -9,9 +9,15 @@ import { Button } from "@/components/ui/button";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Loader2, ArrowLeft, Trophy, Volume2 } from "lucide-react";
+import { Loader2, ArrowLeft, Trophy, Volume2, Pause, Play, Square } from "lucide-react";
 import { toast } from "sonner";
-import { buildStandingsSpeech, speakText } from "@/lib/tts";
+import {
+  buildStandingsSpeech,
+  speakText,
+  pauseSpeech,
+  resumeSpeech,
+  stopSpeech,
+} from "@/lib/tts";
 
 interface StandingRow {
   team_id: number;
@@ -40,7 +46,11 @@ export default function StandingsPage() {
   const [loading, setLoading] = useState(true);
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [groups, setGroups] = useState<string[]>([]);
-  const [speaking, setSpeaking] = useState(false);
+  const [speechStatus, setSpeechStatus] = useState<"idle" | "loading" | "playing" | "paused">("idle");
+
+  useEffect(() => {
+    return () => stopSpeech();
+  }, []);
 
   useEffect(() => {
     Promise.all([
@@ -176,16 +186,31 @@ export default function StandingsPage() {
       text = buildStandingsSpeech(standings);
     }
 
-    setSpeaking(true);
+    setSpeechStatus("loading");
     try {
-      await speakText(text);
+      await speakText(text, { onStart: () => setSpeechStatus("playing") });
     } catch {
       toast.error(
         "No se pudo reproducir el audio. Verifica que Azure Speech esté configurado en el backend."
       );
     } finally {
-      setSpeaking(false);
+      setSpeechStatus("idle");
     }
+  }
+
+  function handlePauseSpeech() {
+    pauseSpeech();
+    setSpeechStatus("paused");
+  }
+
+  function handleResumeSpeech() {
+    resumeSpeech();
+    setSpeechStatus("playing");
+  }
+
+  function handleStopSpeech() {
+    stopSpeech();
+    setSpeechStatus("idle");
   }
 
   return (
@@ -198,19 +223,44 @@ export default function StandingsPage() {
           </Button>
           <h1 className="text-3xl font-bold">Tabla de posiciones</h1>
         </div>
-        <Button
-          variant="outline"
-          onClick={handleSpeakStandings}
-          disabled={speaking || loading}
-          className="gap-2"
-        >
-          {speaking ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Volume2 className="h-4 w-4" />
+        <div className="flex items-center gap-2 flex-wrap">
+          {speechStatus === "idle" && (
+            <Button
+              variant="outline"
+              onClick={handleSpeakStandings}
+              disabled={loading}
+              className="gap-2"
+            >
+              <Volume2 className="h-4 w-4" />
+              Escuchar posiciones
+            </Button>
           )}
-          Escuchar posiciones
-        </Button>
+          {speechStatus === "loading" && (
+            <Button variant="outline" disabled className="gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Generando audio...
+            </Button>
+          )}
+          {(speechStatus === "playing" || speechStatus === "paused") && (
+            <>
+              {speechStatus === "playing" ? (
+                <Button variant="outline" onClick={handlePauseSpeech} className="gap-2">
+                  <Pause className="h-4 w-4" />
+                  Pausar
+                </Button>
+              ) : (
+                <Button variant="outline" onClick={handleResumeSpeech} className="gap-2">
+                  <Play className="h-4 w-4" />
+                  Reanudar
+                </Button>
+              )}
+              <Button variant="destructive" onClick={handleStopSpeech} className="gap-2">
+                <Square className="h-4 w-4" />
+                Detener
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       {isMixed ? (
