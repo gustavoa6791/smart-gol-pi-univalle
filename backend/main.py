@@ -4,6 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import time
 import models
+
+from routers import auth, players, teams, templates, tournaments, public, tts, speech, speech_auth
 from database import engine
 from sqlalchemy import text
 
@@ -21,7 +23,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from routers import auth, players, teams, templates, tournaments, public, tts, speech
+# --- REGISTRO OFICIAL DE LAS RUTAS ---
 app.include_router(auth.router)
 app.include_router(players.router)
 app.include_router(teams.router)
@@ -29,9 +31,9 @@ app.include_router(templates.router)
 app.include_router(tournaments.router)
 app.include_router(public.router)
 app.include_router(tts.router)
-app.include_router(speech.router)
+app.include_router(speech.router)  
+app.include_router(speech_auth.router) 
 
-# Servir archivos subidos como estáticos
 UPLOAD_DIR = "/app/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
