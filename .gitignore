@@ -43,3 +43,11 @@ yarn-error.log*
 # Testing
 coverage/
 .nyc_output/
+
+# SpeechBrain
+backend/pretrained_models/
+pretrained_models/
+
+# Audios de prueba
+*.wav
+*.ogg

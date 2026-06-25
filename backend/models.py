@@ -82,8 +82,11 @@ class User(Base):
     email = Column(String(150), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     role = Column(Enum(UserRole), nullable=False, default=UserRole.viewer, server_default=UserRole.viewer.value)
+    azure_voice_profile_id = Column(String(100), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    voice_embedding = Column(Text, nullable=True)
+    voice_enrolled_at = Column(DateTime(timezone=True), nullable=True)
 
 
 class Player(Base):
