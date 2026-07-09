@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Loader2, Mic, Square } from "lucide-react";
+import { ArrowLeft, Camera, Loader2, Mic, Square, ScanLine, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 const POSITIONS = [
@@ -25,7 +25,6 @@ const DOC_TYPES = [
   { value: "PA", label: "Pasaporte (PA)" },
 ];
 
-// Etiquetas legibles para el resumen de "qué reconoció la voz"
 const FIELD_LABELS: Record<string, string> = {
   first_name: "Primer nombre",
   second_name: "Segundo nombre",
@@ -41,6 +40,19 @@ const FIELD_LABELS: Record<string, string> = {
   gender: "Género",
   notes: "Notas",
 };
+
+function apiErrorMessage(err: unknown, fallback: string): string {
+  const data = (err as { response?: { data?: { detail?: unknown } } })?.response?.data;
+  const detail = data?.detail;
+  if (typeof detail === "string" && detail.trim()) return detail;
+  if (Array.isArray(detail)) {
+    const msgs = detail
+      .map((item) => (typeof item === "object" && item && "msg" in item ? String((item as { msg: string }).msg) : ""))
+      .filter(Boolean);
+    if (msgs.length) return msgs.join(". ");
+  }
+  return fallback;
+}
 
 export default function NewPlayerPage() {
   const router = useRouter();
@@ -68,6 +80,12 @@ export default function NewPlayerPage() {
   const [recognized, setRecognized] = useState<Set<string>>(new Set());
   const recognizerRef = useRef<{ stopContinuousRecognitionAsync: (cb: () => void, err: (e: unknown) => void) => void; close: () => void } | null>(null);
   const transcriptRef = useRef("");
+  const ocrInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Estado del escaneo OCR (cédula) ───────────────────────────────────────
+  const [scanning, setScanning] = useState(false);
+  const [ocrText, setOcrText] = useState("");
 
   const set = (field: keyof PlayerCreate, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value || undefined }));
@@ -80,9 +98,63 @@ export default function NewPlayerPage() {
     });
   };
 
-  // Resaltado verde para los campos que rellenó la voz (aún sin revisar)
+  // Resaltado verde para campos rellenados por voz u OCR (aún sin revisar)
   const voiceClass = (field: keyof PlayerCreate) =>
     recognized.has(field) ? "ring-2 ring-green-400 bg-green-50/60" : "";
+
+  function applyExtractedFields(
+    fields: Partial<PlayerCreate>,
+    source: "voz" | "cédula"
+  ) {
+    const keys = Object.keys(fields);
+    setForm((prev) => ({ ...prev, ...fields }));
+    setRecognized(new Set(keys));
+
+    if (keys.length === 0) {
+      toast.warning(
+        source === "cédula"
+          ? "No reconocí ningún campo en la imagen. Prueba con un pantallazo más nítido."
+          : "No reconocí ningún campo. Revisa la transcripción e intenta otra vez."
+      );
+    } else {
+      const missing = ["first_name", "first_surname"].filter((k) => !keys.includes(k));
+      toast.success(
+        `Reconocí ${keys.length} campo(s) desde ${source === "cédula" ? "la cédula" : "el dictado"}: ` +
+          `${keys.map((k) => FIELD_LABELS[k] ?? k).join(", ")}` +
+          (missing.length
+            ? `. Falta(n): ${missing.map((k) => FIELD_LABELS[k]).join(", ")}`
+            : ". Revisa y corrige antes de guardar.")
+      );
+    }
+  }
+
+  async function handleOcrUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setScanning(true);
+    setOcrText("");
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const { data } = await api.post("/api/players/extract-document", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      const fields = (data.fields ?? {}) as Partial<PlayerCreate>;
+      if (data.raw_text) setOcrText(data.raw_text);
+      if (data.message && Object.keys(fields).length === 0) {
+        toast.warning(data.message);
+      }
+      applyExtractedFields(fields, "cédula");
+    } catch (err: unknown) {
+      toast.error(apiErrorMessage(err, "Error al leer la cédula. Revisa la configuración de Azure Vision."));
+    } finally {
+      setScanning(false);
+      if (ocrInputRef.current) ocrInputRef.current.value = "";
+      if (cameraInputRef.current) cameraInputRef.current.value = "";
+    }
+  }
 
   async function startListening() {
     try {
@@ -154,22 +226,7 @@ export default function NewPlayerPage() {
     try {
       const { data } = await api.post("/api/players/extract", { text });
       const fields = (data.fields ?? {}) as Partial<PlayerCreate>;
-      const keys = Object.keys(fields);
-
-      setForm((prev) => ({ ...prev, ...fields }));
-      setRecognized(new Set(keys));
-
-      if (keys.length === 0) {
-        toast.warning("No reconocí ningún campo. Revisa la transcripción e intenta otra vez.");
-      } else {
-        const missing = ["first_name", "first_surname"].filter((k) => !keys.includes(k));
-        toast.success(
-          `Reconocí ${keys.length} campo(s): ${keys.map((k) => FIELD_LABELS[k] ?? k).join(", ")}` +
-            (missing.length
-              ? `. Falta(n): ${missing.map((k) => FIELD_LABELS[k]).join(", ")}`
-              : ". Revisa y corrige antes de guardar.")
-        );
-      }
+      applyExtractedFields(fields, "voz");
     } catch {
       toast.error("Error al procesar la transcripción");
     } finally {
@@ -201,7 +258,7 @@ export default function NewPlayerPage() {
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
       <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <Button variant="outline" size="sm" type="button" onClick={() => router.push("/players")}>
             <ArrowLeft className="h-4 w-4 mr-1" />
@@ -209,8 +266,8 @@ export default function NewPlayerPage() {
           </Button>
           <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">Nuevo jugador</h1>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Botón de dictado por voz — al lado de "Crear jugador" */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Botón de dictado por voz */}
           <Button
             type="button"
             size="sm"
@@ -239,23 +296,92 @@ export default function NewPlayerPage() {
         </div>
       </div>
 
-        {/* Banner de transcripción en vivo / ayuda */}
-        {(listening || processing || liveText) && (
+        {/* Banner de transcripción en vivo / OCR */}
+        {(listening || processing || liveText || scanning || ocrText) && (
           <div className="rounded-lg border-2 border-green-300 bg-green-50 p-3 text-sm">
             <div className="flex items-center gap-2 font-semibold text-green-800">
-              {listening ? (
+              {scanning ? (
+                <><ScanLine className="h-4 w-4 animate-pulse" /> Leyendo la cédula con Azure Vision…</>
+              ) : listening ? (
                 <><Mic className="h-4 w-4 animate-pulse" /> Escuchando… (di nombre, posición, cédula, fecha de nacimiento, teléfono…)</>
               ) : processing ? (
                 <><Loader2 className="h-4 w-4 animate-spin" /> Procesando lo que dijiste…</>
+              ) : ocrText ? (
+                "Texto detectado en la cédula"
               ) : (
                 "Transcripción"
               )}
             </div>
-            <p className="mt-1 italic text-green-900 min-h-[1.25rem]">
-              {liveText || "Habla con naturalidad; al terminar pulsa “Listo” y rellenaré el formulario."}
+            <p className="mt-1 italic text-green-900 min-h-[1.25rem] whitespace-pre-wrap max-h-40 overflow-y-auto">
+              {scanning
+                ? "Analizando imagen…"
+                : ocrText || liveText || "Habla con naturalidad; al terminar pulsa “Listo”. O sube un pantallazo/foto de la cédula."}
             </p>
           </div>
         )}
+
+        {/* Escanear cédula — al inicio para llenar nombres, documento, fecha, género, etc. */}
+        <Card className="shadow-xl border-2 border-green-300 bg-white overflow-hidden pt-0 gap-0">
+          <CardHeader className="bg-gradient-to-r from-green-100 to-green-200 py-4">
+            <CardTitle className="flex items-center gap-2">
+              <ScanLine className="h-5 w-5" />
+              Leer cédula con Azure Vision
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4 space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Sube un pantallazo o una foto de la cédula. Se llenarán automáticamente nombres, apellidos,
+              tipo y número de documento, fecha de nacimiento y género.
+              <span className="block mt-1 text-green-800/80">
+                Tip: incluye frente y reverso en la misma imagen para fecha de nacimiento y sexo.
+              </span>
+            </p>
+            <input
+              ref={ocrInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/bmp,image/tiff"
+              className="hidden"
+              onChange={handleOcrUpload}
+            />
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handleOcrUpload}
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={scanning || listening || processing}
+                className="gap-2 border-green-500 text-green-700 hover:bg-green-100 font-semibold"
+                onClick={() => ocrInputRef.current?.click()}
+              >
+                {scanning ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+                {scanning ? "Leyendo imagen…" : "Subir imagen"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={scanning || listening || processing}
+                className="gap-2 border-green-500 text-green-700 hover:bg-green-100 font-semibold"
+                onClick={() => cameraInputRef.current?.click()}
+              >
+                <Camera className="h-4 w-4" />
+                Tomar foto
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Nombres */}
         <Card className="shadow-xl border-2 border-green-200 bg-white overflow-hidden pt-0 gap-0">
           <CardHeader className="bg-gradient-to-r from-green-50 to-green-100 py-4">
