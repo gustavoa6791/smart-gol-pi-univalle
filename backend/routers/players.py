@@ -10,6 +10,12 @@ from pydantic import BaseModel
 from database import get_db
 import models, schemas, auth as auth_utils
 from services.player_extraction import extract_player_fields
+from services.azure_vision_ocr import (
+    AzureVisionNotConfiguredError,
+    azure_vision_configured,
+    extract_text_from_image,
+)
+from services.cedula_parser import extract_fields_from_document_image
 
 router = APIRouter(prefix="/api/players", tags=["players"])
 
@@ -26,6 +32,8 @@ os.makedirs(DOCS_DIR, exist_ok=True)
 
 ALLOWED_PHOTO_TYPES = {"image/jpeg", "image/png", "image/webp"}
 ALLOWED_DOC_TYPES = {"application/pdf", "image/jpeg", "image/png"}
+ALLOWED_OCR_TYPES = {"image/jpeg", "image/png", "image/webp", "image/bmp", "image/tiff"}
+MAX_OCR_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 
 def _player_query(db: Session):
@@ -69,6 +77,61 @@ def extract_player_from_speech(
     """
     fields = extract_player_fields(payload.text)
     return {"fields": fields, "recognized": list(fields.keys())}
+
+
+@router.post("/extract-document")
+async def extract_player_from_document(
+    file: UploadFile = File(...),
+    _: models.User = Depends(auth_utils.require_admin_or_organizer),
+):
+    """OCR de cédula/documento: imagen o pantallazo → campos del jugador.
+
+    Usa Azure AI Vision (Read) en el servidor y un parser de cédula colombiana.
+    Acepta JPG, PNG, WebP, BMP y TIFF (fotos y capturas de pantalla).
+    """
+    if not azure_vision_configured():
+        raise HTTPException(
+            status_code=503,
+            detail="Azure AI Vision no está configurado en el servidor.",
+        )
+
+    if file.content_type not in ALLOWED_OCR_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail="Tipo de archivo no permitido. Use JPG, PNG, WebP, BMP o TIFF.",
+        )
+
+    content = await file.read()
+    if len(content) > MAX_OCR_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="El archivo supera el límite de 10 MB.")
+
+    if not content:
+        raise HTTPException(status_code=400, detail="El archivo está vacío.")
+
+    try:
+        raw_text = extract_text_from_image(content)
+    except AzureVisionNotConfiguredError:
+        raise HTTPException(
+            status_code=503,
+            detail="Azure AI Vision no está configurado en el servidor.",
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+
+    if not raw_text.strip():
+        return {
+            "fields": {},
+            "recognized": [],
+            "raw_text": "",
+            "message": "No se detectó texto en la imagen. Prueba con mejor iluminación o un pantallazo más nítido.",
+        }
+
+    fields = extract_fields_from_document_image(raw_text)
+    return {
+        "fields": fields,
+        "recognized": list(fields.keys()),
+        "raw_text": raw_text,
+    }
 
 
 @router.get("/{player_id}", response_model=schemas.PlayerOut)
