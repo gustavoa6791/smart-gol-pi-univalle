@@ -1,11 +1,23 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session, selectinload
 from typing import List, Dict, Optional
 from collections import defaultdict
+import io
 
 from database import get_db
 import models, schemas, auth as auth_utils
 from services.fixture import generate_fixture, generate_knockout_bracket, generate_mixed_fixture
+from services.azure_vision_ocr import (
+    AzureVisionNotConfiguredError,
+    azure_vision_configured,
+    extract_words_from_image,
+)
+from services.scorecard_parser import parse_scorecard_words
+from services.scorecard_excel import build_scorecard_workbook
+
+ALLOWED_SCORECARD_TYPES = {"image/jpeg", "image/png", "image/webp", "image/bmp", "image/tiff"}
+MAX_SCORECARD_FILE_SIZE = 30 * 1024 * 1024  # 30 MB
 
 router = APIRouter(prefix="/api/tournaments", tags=["tournaments"])
 
@@ -451,6 +463,149 @@ def get_match_detail(
     if not match:
         raise HTTPException(status_code=404, detail="Match not found")
     return match
+
+
+@router.get("/matches/{match_id}/scorecard/excel")
+def download_scorecard_excel(
+    match_id: int,
+    blank: bool = False,
+    db: Session = Depends(get_db),
+    _: models.User = Depends(auth_utils.get_current_user),
+):
+    """Genera la tarjeta de árbitro en Excel: con datos del partido o en blanco."""
+    match = db.query(models.Match).options(
+        selectinload(models.Match.home_team).selectinload(models.Team.players),
+        selectinload(models.Match.away_team).selectinload(models.Team.players),
+        selectinload(models.Match.player_stats),
+    ).filter(models.Match.id == match_id).first()
+    if not match:
+        raise HTTPException(status_code=404, detail="Match not found")
+
+    jersey_by_player = {
+        stat.player_id: stat.jersey_number
+        for stat in match.player_stats
+        if stat.jersey_number is not None
+    }
+
+    def team_players(team: models.Team) -> list[dict]:
+        return [
+            {
+                "jersey_number": jersey_by_player.get(p.id),
+                "name": f"{p.first_name} {p.first_surname}",
+            }
+            for p in team.players
+        ]
+
+    content = build_scorecard_workbook(
+        round_label=f"Jornada {match.round}",
+        home_team_name=match.home_team.name,
+        home_players=team_players(match.home_team),
+        away_team_name=match.away_team.name,
+        away_players=team_players(match.away_team),
+        blank=blank,
+    )
+
+    filename = f"tarjeta_partido_{match_id}{'_blanco' if blank else ''}.xlsx"
+    return StreamingResponse(
+        io.BytesIO(content),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.post("/matches/{match_id}/scorecard/extract")
+async def extract_match_scorecard(
+    match_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _: models.User = Depends(auth_utils.require_admin_or_organizer),
+):
+    """OCR de la tarjeta física de árbitro: foto → stats propuestos por jugador.
+
+    No guarda nada en la base de datos; el frontend debe revisar y confirmar
+    con el endpoint existente POST /matches/{match_id}/stats.
+    """
+    if not azure_vision_configured():
+        raise HTTPException(
+            status_code=503,
+            detail="Azure AI Vision no está configurado en el servidor.",
+        )
+
+    if file.content_type not in ALLOWED_SCORECARD_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail="Tipo de archivo no permitido. Use JPG, PNG, WebP, BMP o TIFF.",
+        )
+
+    content = await file.read()
+    if len(content) > MAX_SCORECARD_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="El archivo supera el límite de 30 MB.")
+    if not content:
+        raise HTTPException(status_code=400, detail="El archivo está vacío.")
+
+    match = db.query(models.Match).options(
+        selectinload(models.Match.home_team).selectinload(models.Team.players),
+        selectinload(models.Match.away_team).selectinload(models.Team.players),
+        selectinload(models.Match.player_stats),
+    ).filter(models.Match.id == match_id).first()
+    if not match:
+        raise HTTPException(status_code=404, detail="Match not found")
+
+    try:
+        raw_text, words = extract_words_from_image(content)
+    except AzureVisionNotConfiguredError:
+        raise HTTPException(
+            status_code=503,
+            detail="Azure AI Vision no está configurado en el servidor.",
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+
+    if not raw_text.strip():
+        return {
+            "raw_text": "",
+            "stats": [],
+            "unmatched_lines": [],
+            "message": "No se detectó texto en la imagen. Prueba con mejor iluminación o una foto más nítida.",
+        }
+
+    stats_by_side, unmatched_lines = parse_scorecard_words(words)
+
+    # Mapear número de camiseta -> (player_id, team_id) por equipo, usando lo ya
+    # asignado en "Editar números" (MatchPlayerStat.jersey_number). Se resuelve
+    # por equipo (no con un solo diccionario global) porque dos jugadores de
+    # equipos distintos pueden compartir número de camiseta.
+    jersey_to_player_by_team: dict[str, dict[int, tuple[int, int]]] = {"home": {}, "away": {}}
+    for stat in match.player_stats:
+        if stat.jersey_number is None:
+            continue
+        side = "home" if stat.team_id == match.home_team_id else "away"
+        jersey_to_player_by_team[side][stat.jersey_number] = (stat.player_id, stat.team_id)
+
+    proposed_stats = []
+    for side in ("home", "away"):
+        jersey_to_player = jersey_to_player_by_team[side]
+        for jersey, values in stats_by_side[side].items():
+            mapping = jersey_to_player.get(jersey)
+            if not mapping:
+                unmatched_lines.append(f"Camiseta #{jersey} no coincide con ningún jugador de este partido")
+                continue
+            player_id, team_id = mapping
+            proposed_stats.append({
+                "player_id": player_id,
+                "team_id": team_id,
+                "goals": values["goals"],
+                "yellow_cards": values["yellow_cards"],
+                "red_cards": values["red_cards"],
+                "jersey_number": jersey,
+                "low_confidence": values.get("low_confidence", {}),
+            })
+
+    return {
+        "raw_text": raw_text,
+        "stats": proposed_stats,
+        "unmatched_lines": unmatched_lines,
+    }
 
 
 @router.post("/matches/{match_id}/stats", response_model=schemas.MatchDetailOut)
