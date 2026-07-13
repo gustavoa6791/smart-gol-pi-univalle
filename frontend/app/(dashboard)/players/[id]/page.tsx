@@ -126,8 +126,11 @@ export default function PlayerDetailPage() {
       });
       setPlayer(data);
       toast.success("Foto actualizada");
-    } catch {
-      toast.error("Error al subir foto");
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.detail ||
+        "Error al subir foto";
+      toast.error(typeof msg === "string" ? msg : "Error al subir foto");
     } finally {
       setUploadingPhoto(false);
       if (photoInputRef.current) photoInputRef.current.value = "";

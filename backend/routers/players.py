@@ -186,6 +186,9 @@ async def upload_photo(
     db: Session = Depends(get_db),
     _: models.User = Depends(auth_utils.require_admin_or_organizer),
 ):
+    from services.azure_vision_ocr import AzureVisionNotConfiguredError
+    from services.image_moderation import InappropriateImageError, moderate_player_photo
+
     player = db.query(models.Player).filter(models.Player.id == player_id).first()
     if not player:
         raise HTTPException(status_code=404, detail="Player not found")
@@ -193,7 +196,27 @@ async def upload_photo(
     if file.content_type not in ALLOWED_PHOTO_TYPES:
         raise HTTPException(status_code=400, detail="Tipo de archivo no permitido. Use JPG, PNG o WebP.")
 
-    ext = file.filename.split(".")[-1]
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="El archivo de imagen está vacío.")
+
+    # Moderación con Azure Vision antes de guardar
+    try:
+        moderate_player_photo(content)
+    except InappropriateImageError as exc:
+        raise HTTPException(status_code=400, detail=exc.user_message())
+    except AzureVisionNotConfiguredError:
+        raise HTTPException(
+            status_code=503,
+            detail="Azure AI Vision no está configurado. No se puede validar la foto.",
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"No se pudo validar la foto con Azure Vision: {exc}",
+        )
+
+    ext = (file.filename or "photo.jpg").rsplit(".", 1)[-1]
     filename = f"{uuid.uuid4()}.{ext}"
     path = os.path.join(PHOTOS_DIR, filename)
 
@@ -203,7 +226,6 @@ async def upload_photo(
         if os.path.exists(old_path):
             os.remove(old_path)
 
-    content = await file.read()
     with open(path, "wb") as f:
         f.write(content)
 
