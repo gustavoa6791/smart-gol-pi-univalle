@@ -59,8 +59,8 @@ def _raise_azure_error(status_code: int, body: str) -> None:
     )
 
 
-def _read_with_rest_v32(image_bytes: bytes) -> str:
-    """Computer Vision Read 3.2 — compatible con la mayoría de recursos Vision."""
+def _poll_read_result_v32(image_bytes: bytes) -> dict:
+    """Computer Vision Read 3.2 — dispara el análisis y devuelve el payload crudo de Azure."""
     base = _base_endpoint()
     analyze_url = f"{base}/vision/v3.2/read/analyze?language=es"
 
@@ -90,17 +90,49 @@ def _read_with_rest_v32(image_bytes: bytes) -> str:
         payload = poll.json()
         status = payload.get("status")
         if status == "succeeded":
-            lines: list[str] = []
-            for result in payload.get("analyzeResult", {}).get("readResults", []):
-                for line in result.get("lines", []):
-                    text = (line.get("text") or "").strip()
-                    if text:
-                        lines.append(text)
-            return "\n".join(lines)
+            return payload
         if status == "failed":
             raise RuntimeError("Azure Vision no pudo leer la imagen (operación fallida).")
 
     raise RuntimeError("Azure Vision tardó demasiado en procesar la imagen.")
+
+
+def _lines_to_text(payload: dict) -> str:
+    lines: list[str] = []
+    for result in payload.get("analyzeResult", {}).get("readResults", []):
+        for line in result.get("lines", []):
+            text = (line.get("text") or "").strip()
+            if text:
+                lines.append(text)
+    return "\n".join(lines)
+
+
+def _lines_to_words(payload: dict) -> list[dict]:
+    """Aplana todas las palabras reconocidas con su centro (cx, cy) y alto, para
+    reconstruir filas/columnas por posición en vez de confiar en el agrupamiento
+    de "líneas" de Azure (poco confiable en tablas anchas con celdas separadas)."""
+    words: list[dict] = []
+    for result in payload.get("analyzeResult", {}).get("readResults", []):
+        for line in result.get("lines", []):
+            for word in line.get("words", []):
+                text = (word.get("text") or "").strip()
+                box = word.get("boundingBox")
+                if not text or not box or len(box) < 8:
+                    continue
+                xs = box[0::2]
+                ys = box[1::2]
+                words.append({
+                    "text": text,
+                    "cx": sum(xs) / len(xs),
+                    "cy": sum(ys) / len(ys),
+                    "height": max(ys) - min(ys),
+                    "confidence": word.get("confidence", 1.0),
+                })
+    return words
+
+
+def _read_with_rest_v32(image_bytes: bytes) -> str:
+    return _lines_to_text(_poll_read_result_v32(image_bytes))
 
 
 def _read_with_image_analysis(image_bytes: bytes) -> str:
@@ -141,3 +173,13 @@ def extract_text_from_image(image_bytes: bytes) -> str:
         if "404" in str(rest_err) or "Not Found" in str(rest_err):
             return _read_with_image_analysis(image_bytes)
         raise
+
+
+def extract_words_from_image(image_bytes: bytes) -> tuple[str, list[dict]]:
+    """Extrae (texto_crudo, palabras_con_posición) para reconstrucción por bounding box.
+
+    Cada palabra es {"text", "cx", "cy", "height"}. Solo soporta el camino v3.2
+    (no el fallback de Image Analysis 4.0, que no se ha necesitado en la práctica).
+    """
+    payload = _poll_read_result_v32(image_bytes)
+    return _lines_to_text(payload), _lines_to_words(payload)

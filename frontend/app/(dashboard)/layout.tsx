@@ -12,11 +12,13 @@ export default function DashboardLayout({
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
-      <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
-      <div className="flex-1 flex flex-col overflow-hidden">
+    <div className="flex h-screen bg-background overflow-hidden print:h-auto print:overflow-visible print:block">
+      <div className="print:hidden">
+        <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
+      </div>
+      <div className="flex-1 flex flex-col overflow-hidden print:overflow-visible print:block">
         {/* Top navbar */}
-        <header className="h-[60px] border-b-2 border-green-200 bg-gradient-to-r from-white via-green-50 to-white flex items-center justify-between px-8 flex-shrink-0 shadow-md">
+        <header className="h-[60px] border-b-2 border-green-200 bg-gradient-to-r from-white via-green-50 to-white flex items-center justify-between px-8 flex-shrink-0 shadow-md print:hidden">
           <div className="flex items-center gap-2">
             {collapsed && (
               <button
@@ -37,7 +39,7 @@ export default function DashboardLayout({
           </div>
         </header>
         {/* Page */}
-        <main className="flex-1 overflow-y-auto p-8">{children}</main>
+        <main className="flex-1 overflow-y-auto p-8 print:overflow-visible print:p-0">{children}</main>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { useCurrentUser, canWrite } from "@/lib/useCurrentUser";
@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Loader2, Plus, Minus, ArrowLeft, Save, Hash, Mic, Square } from "lucide-react";
+import { Loader2, Plus, Minus, ArrowLeft, Save, Hash, Mic, Square, Printer, ScanLine } from "lucide-react";
 import { toast } from "sonner";
 
 interface Player {
@@ -33,6 +33,7 @@ interface PlayerStat {
   yellow_cards: number;
   red_cards: number;
   jersey_number?: number | null;
+  low_confidence?: { goals?: boolean; yellow_cards?: boolean; red_cards?: boolean };
 }
 
 interface MatchDetail {
@@ -154,6 +155,17 @@ export default function MatchDetailPage() {
   const [voiceText, setVoiceText] = useState("");
   const recognizerRef = useRef<{ stopContinuousRecognitionAsync: (cb: () => void, err: (e: unknown) => void) => void; close: () => void } | null>(null);
 
+  // Escaneo de tarjeta de árbitro (OCR)
+  const [scanningCard, setScanningCard] = useState(false);
+  const [scorecardText, setScorecardText] = useState("");
+  const [unmatchedLines, setUnmatchedLines] = useState<string[]>([]);
+  const [autofilledPlayers, setAutofilledPlayers] = useState<Set<number>>(new Set());
+  const [lowConfidenceFields, setLowConfidenceFields] = useState<
+    Record<number, { goals?: boolean; yellow_cards?: boolean; red_cards?: boolean }>
+  >({});
+  const scorecardInputRef = useRef<HTMLInputElement | null>(null);
+  const scorecardCameraInputRef = useRef<HTMLInputElement | null>(null);
+
   useEffect(() => {
     api
       .get(`/api/tournaments/matches/${matchId}/detail`)
@@ -221,6 +233,110 @@ export default function MatchDetailPage() {
       toast.error("Error al guardar números");
     }
   };
+
+  function openScorecardScan() {
+    if (Object.keys(jerseyNums).length === 0) {
+      toast.error("Asigna los números de camiseta primero (\"Editar números\"). Sin eso no se puede escanear la tarjeta.");
+      return;
+    }
+    scorecardCameraInputRef.current?.click();
+  }
+
+  // Azure Vision Read tiene un límite duro de 4MB por imagen (no configurable).
+  // Las fotos de celular suelen pesar más, así que las re-comprimimos en el navegador antes de subir.
+  async function compressImageForOcr(file: File): Promise<Blob> {
+    const MAX_DIMENSION = 2600;
+    const MAX_BYTES = 3.5 * 1024 * 1024;
+
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
+    const width = Math.round(bitmap.width * scale);
+    const height = Math.round(bitmap.height * scale);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("canvas no disponible");
+    ctx.drawImage(bitmap, 0, 0, width, height);
+
+    let quality = 0.9;
+    let blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+    while (blob && blob.size > MAX_BYTES && quality > 0.3) {
+      quality -= 0.1;
+      blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+    }
+    if (!blob) throw new Error("no se pudo comprimir la imagen");
+    return blob;
+  }
+
+  async function handleScorecardUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setScanningCard(true);
+    setScorecardText("");
+    setUnmatchedLines([]);
+    const formData = new FormData();
+
+    try {
+      const compressed = await compressImageForOcr(file);
+      formData.append("file", compressed, "tarjeta.jpg");
+    } catch {
+      formData.append("file", file);
+    }
+
+    try {
+      const { data } = await api.post(`/api/tournaments/matches/${matchId}/scorecard/extract`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (data.raw_text) setScorecardText(data.raw_text);
+      if (data.message) toast.warning(data.message);
+
+      const proposedStats: PlayerStat[] = data.stats ?? [];
+      if (proposedStats.length > 0) {
+        setStats((prev) => {
+          const next = { ...prev };
+          proposedStats.forEach((s) => {
+            next[s.player_id] = { ...next[s.player_id], ...s };
+          });
+          autoSaveStats(next, jerseyNums);
+          return next;
+        });
+        setAutofilledPlayers(new Set(proposedStats.map((s) => s.player_id)));
+
+        const lowConf: Record<number, { goals?: boolean; yellow_cards?: boolean; red_cards?: boolean }> = {};
+        let lowConfCount = 0;
+        proposedStats.forEach((s) => {
+          if (s.low_confidence) {
+            lowConf[s.player_id] = s.low_confidence;
+            if (s.low_confidence.goals || s.low_confidence.yellow_cards || s.low_confidence.red_cards) {
+              lowConfCount += 1;
+            }
+          }
+        });
+        setLowConfidenceFields(lowConf);
+
+        toast.success(`Se autocompletaron ${proposedStats.length} jugador(es) desde la tarjeta. Revisa antes de guardar.`);
+        if (lowConfCount > 0) {
+          toast.warning(`${lowConfCount} valor(es) con baja confianza de OCR (resaltados en rojo) — revísalos con cuidado.`);
+        }
+      }
+
+      const lines: string[] = data.unmatched_lines ?? [];
+      setUnmatchedLines(lines);
+      if (lines.length > 0) {
+        toast.warning(`${lines.length} línea(s) no se pudieron reconocer. Revísalas manualmente.`);
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || "Error al leer la tarjeta");
+    } finally {
+      setScanningCard(false);
+      if (scorecardInputRef.current) scorecardInputRef.current.value = "";
+      if (scorecardCameraInputRef.current) scorecardCameraInputRef.current.value = "";
+    }
+  }
 
   const homeScore = match ? match.home_team.players.reduce((sum, p) => sum + (stats[p.id]?.goals || 0), 0) : 0;
   const awayScore = match ? match.away_team.players.reduce((sum, p) => sum + (stats[p.id]?.goals || 0), 0) : 0;
@@ -329,8 +445,16 @@ export default function MatchDetailPage() {
     const stat = stats[player.id];
     if (!stat) return null;
 
+    const autofilled = autofilledPlayers.has(player.id);
+    const lowConf = lowConfidenceFields[player.id];
+
     return (
-      <div key={player.id} className="flex items-center justify-between py-2 px-3 border-b last:border-b-0">
+      <div
+        key={player.id}
+        className={`flex items-center justify-between py-2 px-3 border-b last:border-b-0 ${
+          autofilled ? "ring-2 ring-green-400 bg-green-50/60" : ""
+        }`}
+      >
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {editingJerseys ? (
             <Input
@@ -365,7 +489,12 @@ export default function MatchDetailPage() {
             <Button size="icon" variant="outline" className="h-7 w-7 text-red-600 hover:bg-red-50" onClick={() => updateStat(player.id, "goals", -1)}>
               <Minus className="h-3 w-3" />
             </Button>
-            <span className="w-6 text-center font-bold">{stat.goals}</span>
+            <span
+              className={`w-6 text-center font-bold ${lowConf?.goals ? "ring-2 ring-red-500 rounded bg-red-50" : ""}`}
+              title={lowConf?.goals ? "OCR con baja confianza — revisa este valor" : undefined}
+            >
+              {stat.goals}
+            </span>
             <Button size="icon" variant="outline" className="h-7 w-7 text-green-600 hover:bg-green-50" onClick={() => updateStat(player.id, "goals", 1)}>
               <Plus className="h-3 w-3" />
             </Button>
@@ -377,7 +506,12 @@ export default function MatchDetailPage() {
             <Button size="icon" variant="outline" className="h-7 w-7 text-red-600 hover:bg-red-50" onClick={() => updateStat(player.id, "yellow_cards", -1)}>
               <Minus className="h-3 w-3" />
             </Button>
-            <span className="w-6 text-center font-bold">{stat.yellow_cards}</span>
+            <span
+              className={`w-6 text-center font-bold ${lowConf?.yellow_cards ? "ring-2 ring-red-500 rounded bg-red-50" : ""}`}
+              title={lowConf?.yellow_cards ? "OCR con baja confianza — revisa este valor" : undefined}
+            >
+              {stat.yellow_cards}
+            </span>
             <Button size="icon" variant="outline" className="h-7 w-7 text-green-600 hover:bg-green-50" onClick={() => updateStat(player.id, "yellow_cards", 1)}>
               <Plus className="h-3 w-3" />
             </Button>
@@ -389,7 +523,12 @@ export default function MatchDetailPage() {
             <Button size="icon" variant="outline" className="h-7 w-7 text-red-600 hover:bg-red-50" onClick={() => updateStat(player.id, "red_cards", -1)}>
               <Minus className="h-3 w-3" />
             </Button>
-            <span className="w-6 text-center font-bold">{stat.red_cards}</span>
+            <span
+              className={`w-6 text-center font-bold ${lowConf?.red_cards ? "ring-2 ring-red-500 rounded bg-red-50" : ""}`}
+              title={lowConf?.red_cards ? "OCR con baja confianza — revisa este valor" : undefined}
+            >
+              {stat.red_cards}
+            </span>
             <Button size="icon" variant="outline" className="h-7 w-7 text-green-600 hover:bg-green-50" onClick={() => updateStat(player.id, "red_cards", 1)}>
               <Plus className="h-3 w-3" />
             </Button>
@@ -425,6 +564,41 @@ export default function MatchDetailPage() {
 
             <Button
               size="sm"
+              variant="outline"
+              onClick={() => router.push(`/tournaments/${tournamentId}/match/${matchId}/scorecard`)}
+            >
+              <Printer className="h-4 w-4 mr-1" />
+              Imprimir tarjeta
+            </Button>
+
+            <input
+              ref={scorecardInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/bmp,image/tiff"
+              className="hidden"
+              onChange={handleScorecardUpload}
+            />
+            <input
+              ref={scorecardCameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handleScorecardUpload}
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={scanningCard}
+              className="gap-2 border-green-500 text-green-700 hover:bg-green-100 font-semibold"
+              onClick={openScorecardScan}
+            >
+              {scanningCard ? <Loader2 className="h-4 w-4 animate-spin" /> : <ScanLine className="h-4 w-4" />}
+              Escanear tarjeta
+            </Button>
+
+            <Button
+              size="sm"
               onClick={listening ? stopVoice : startVoice}
               className={`gap-2 font-bold shadow-lg transition-all ${
                 listening
@@ -453,6 +627,32 @@ export default function MatchDetailPage() {
           <p className="mt-1 italic text-green-900 min-h-[1.25rem]">
             {voiceText || "Habla con naturalidad; al terminar el silencio se procesará automáticamente."}
           </p>
+        </div>
+      )}
+
+      {/* Banner OCR tarjeta de árbitro */}
+      {(scanningCard || scorecardText) && (
+        <div className="rounded-lg border-2 border-green-300 bg-green-50 p-3 text-sm">
+          <div className="flex items-center gap-2 font-semibold text-green-800">
+            {scanningCard ? (
+              <><ScanLine className="h-4 w-4 animate-pulse" /> Leyendo la tarjeta con Azure Vision…</>
+            ) : (
+              "Texto detectado en la tarjeta"
+            )}
+          </div>
+          <p className="mt-1 italic text-green-900 min-h-[1.25rem] whitespace-pre-wrap max-h-40 overflow-y-auto">
+            {scanningCard ? "Analizando imagen…" : scorecardText}
+          </p>
+          {unmatchedLines.length > 0 && (
+            <div className="mt-2 text-red-700">
+              <p className="font-semibold">{unmatchedLines.length} línea(s) no reconocida(s):</p>
+              <ul className="list-disc list-inside">
+                {unmatchedLines.map((line, i) => (
+                  <li key={i}>{line}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
 

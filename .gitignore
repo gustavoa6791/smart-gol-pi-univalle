@@ -51,3 +51,6 @@ pretrained_models/
 # Audios de prueba
 *.wav
 *.ogg
+
+
+backend/uploads/
