@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session, selectinload
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 from collections import defaultdict
 import io
 
@@ -18,6 +18,66 @@ from services.scorecard_excel import build_scorecard_workbook
 
 ALLOWED_SCORECARD_TYPES = {"image/jpeg", "image/png", "image/webp", "image/bmp", "image/tiff"}
 MAX_SCORECARD_FILE_SIZE = 30 * 1024 * 1024  # 30 MB
+
+import re
+import difflib
+
+# ─── HELPER FUNCTIONS FOR TEAM OCR MATCHING ──────────────────────────────────
+
+def _clean_ocr_line(line: str) -> str:
+    """
+    Normaliza el texto de una línea para maximizar las coincidencias.
+    Remueve números de listas al inicio, viñetas, emojis y limpia espacios extras.
+    Ejemplo: "1. Los Galácticos FC 🔥" -> "los galacticos fc"
+    """
+    text = line.strip().lower()
+    # Eliminar números y viñetas típicas de inicio de renglón (ej: "1.", "10-", "•")
+    text = re.sub(r'^\s*[\d\u2022\-\*\.]+\s*[\.\-\)]*', '', text)
+    # Conservar solo caracteres alfanuméricos, espacios y eñes/tildes comunes
+    text = re.sub(r'[^\w\sáéíóúñ]', '', text)
+    return " ".join(text.split())
+
+
+def _match_teams(ocr_text: str, db_teams: List[models.Team], threshold: float = 0.6) -> Tuple[List[models.Team], List[str]]:
+    """
+    Compara las líneas del OCR con todos los equipos disponibles en la DB.
+    Retorna una tupla: (lista_de_equipos_encontrados, lista_de_lineas_no_reconocidas)
+    """
+    matched_teams: List[models.Team] = []
+    unmatched_lines: List[str] = []
+    
+    # Separamos por saltos de línea ignorando renglones vacíos o extremadamente cortos
+    lines = [line.strip() for line in ocr_text.split("\n") if len(line.strip()) > 1]
+    
+    # Creamos un mapa de nombres limpios apuntando al objeto original del equipo
+    team_map: Dict[str, models.Team] = {
+        _clean_ocr_line(team.name): team for team in db_teams
+    }
+    db_clean_names = list(team_map.keys())
+
+    for original_line in lines:
+        cleaned = _clean_ocr_line(original_line)
+        if not cleaned:
+            continue
+            
+        # 1. Intento de match exacto con el texto procesado
+        if cleaned in team_map:
+            team = team_map[cleaned]
+            if team not in matched_teams:
+                matched_teams.append(team)
+            continue
+            
+        # 2. Intento difuso (Fuzzy Matching) si el escaneo tiene variaciones menores
+        matches = difflib.get_close_matches(cleaned, db_clean_names, n=1, cutoff=threshold)
+        if matches:
+            team = team_map[matches[0]]
+            if team not in matched_teams:
+                matched_teams.append(team)
+        else:
+            # Líneas como títulos ("Lista de Inscritos:"), cabeceras, o nombres no registrados
+            unmatched_lines.append(original_line)
+            
+    return matched_teams, unmatched_lines
 
 router = APIRouter(prefix="/api/tournaments", tags=["tournaments"])
 
@@ -133,6 +193,84 @@ def get_tournament_teams(
         raise HTTPException(status_code=404, detail="Tournament not found")
     return tournament.teams
 
+@router.post("/{tournament_id}/teams/detect-ocr")
+async def detect_tournament_teams_ocr(
+    tournament_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _: models.User = Depends(auth_utils.require_admin_or_organizer),
+):
+    """
+    Procesa una imagen (lista de equipos) usando Azure Vision OCR,
+    cruza los nombres contra los equipos existentes en la DB, e identifica
+    cuáles pertenecen ya al torneo y cuáles son candidatos nuevos.
+    """
+    if not azure_vision_configured():
+        raise HTTPException(
+            status_code=503,
+            detail="Azure AI Vision no está configurado en el servidor.",
+        )
+
+    if file.content_type not in ALLOWED_SCORECARD_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail="Tipo de archivo no permitido. Use JPG, PNG, WebP, BMP o TIFF.",
+        )
+
+    content = await file.read()
+    if len(content) > MAX_SCORECARD_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="El archivo supera el límite de 30 MB.")
+    if not content:
+        raise HTTPException(status_code=400, detail="El archivo está vacío.")
+
+    # Verificar que el torneo exista
+    tournament = db.query(models.Tournament).filter(models.Tournament.id == tournament_id).first()
+    if not tournament:
+        raise HTTPException(status_code=404, detail="Tournament not found")
+
+    # Extraer texto de la imagen usando el servicio existente
+    try:
+        raw_text, _ = extract_words_from_image(content)
+    except AzureVisionNotConfiguredError:
+        raise HTTPException(
+            status_code=503,
+            detail="Azure AI Vision no está configurado en el servidor.",
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+
+    if not raw_text.strip():
+        return {
+            "raw_text": "",
+            "proposed_teams": [],
+            "unmatched_lines": [],
+            "message": "No se detectó texto en la imagen.",
+        }
+
+    # Traer todos los equipos del sistema para hacer el cruce difuso
+    all_system_teams = db.query(models.Team).all()
+    
+    # Identificar cuáles de esos equipos ya están asignados al torneo actual
+    existing_tournament_team_ids = {t.id for t in tournament.teams}
+
+    # Ejecutar emparejamiento
+    matched_teams, unmatched_lines = _match_teams(raw_text, all_system_teams)
+
+    proposed_teams = []
+    for team in matched_teams:
+        proposed_teams.append({
+            "id": team.id,
+            "name": team.name,
+            "category": team.category.value if team.category else None,
+            "shield_url": team.shield_url,
+            "already_in_tournament": team.id in existing_tournament_team_ids
+        })
+
+    return {
+        "raw_text": raw_text,
+        "proposed_teams": proposed_teams,
+        "unmatched_lines": unmatched_lines,
+    }
 
 # ─── FIXTURE GENERATION ──────────────────────────────────────────────────────
 

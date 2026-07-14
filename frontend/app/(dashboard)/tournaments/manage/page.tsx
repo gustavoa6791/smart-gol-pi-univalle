@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Loader2, Trash2, Eye } from "lucide-react";
+import { Plus, Loader2, Trash2, Eye, Camera} from "lucide-react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import {
@@ -54,6 +54,11 @@ export default function TournamentManagePage() {
   const [advancedMap, setAdvancedMap] = useState<Record<number, boolean>>({});
 
   const [form, setForm] = useState<TournamentCreate>({ name: "", template_id: 0 });
+
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [proposedTeams, setProposedTeams] = useState<any[]>([]);
+  const [unmatchedLines, setUnmatchedLines] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<"manual" | "ocr_results">("manual");
 
   function loadData() {
     setLoading(true);
@@ -122,7 +127,50 @@ export default function TournamentManagePage() {
   function openAssignTeams(t: Tournament) {
     setSelectedTournament(t);
     setSelectedTeamIds([]);
+    setProposedTeams([]);
+    setUnmatchedLines([]);
+    setViewMode("manual"); // Inicia por defecto en modo manual
     setTeamsOpen(true);
+  }
+
+  async function handleOcrUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !selectedTournament) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    setOcrLoading(true);
+    try {
+      const res = await api.post(`/api/tournaments/${selectedTournament.id}/teams/detect-ocr`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      const { proposed_teams, unmatched_lines, message } = res.data;
+
+      if (proposed_teams.length === 0) {
+        toast.info(message || "No se reconocieron equipos del sistema en la imagen.");
+      } else {
+        toast.success(`Se detectaron ${proposed_teams.length} posibles equipos.`);
+      }
+
+      setProposedTeams(proposed_teams);
+      setUnmatchedLines(unmatched_lines || []);
+      
+      // Auto-seleccionar los equipos propuestos que NO estén ya asignados al torneo
+      const newTeamIds = proposed_teams
+        .filter((pt: any) => !pt.already_in_tournament)
+        .map((pt: any) => pt.id);
+
+      setSelectedTeamIds(newTeamIds);
+      setViewMode("ocr_results"); // Cambia la vista para mostrar las sugerencias
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || "Error al procesar la imagen con Azure OCR");
+    } finally {
+      setOcrLoading(false);
+      // Limpiar el input para permitir volver a subir el mismo archivo si es necesario
+      e.target.value = "";
+    }
   }
 
   async function assignTeams() {
@@ -343,29 +391,145 @@ export default function TournamentManagePage() {
 
       {/* Dialog asignar equipos */}
       <Dialog open={teamsOpen} onOpenChange={setTeamsOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Asignar equipos a {selectedTournament?.name}</DialogTitle>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader className="flex flex-row items-center justify-between border-b pb-3 pr-6">
+            <div>
+              <DialogTitle>Asignar equipos a {selectedTournament?.name}</DialogTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Selecciona manualmente o sube una captura/foto de la lista de inscritos.
+              </p>
+            </div>
+            
+            {/* Botón OCR camuflado como Input de Archivos */}
+            <div className="relative">
+              <input
+                type="file"
+                id="ocr-file-input"
+                accept="image/*"
+                className="hidden"
+                onChange={handleOcrUpload}
+                disabled={ocrLoading}
+              />
+              <Button
+                size="sm"
+                variant={viewMode === "ocr_results" ? "default" : "outline"}
+                className="gap-1.5 border-green-600 text-green-700 hover:bg-green-50"
+              >
+                <label htmlFor="ocr-file-input" className="cursor-pointer">
+                  {ocrLoading ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-green-700" />
+                  ) : (
+                    <Camera className="h-3.5 w-3.5 text-green-700" />
+                  )}
+                  {ocrLoading ? "Procesando..." : "Escanear Lista"}
+                </label>
+              </Button>
+            </div>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-2 max-h-[400px] overflow-y-auto">
-            {teams.map((team) => (
-              <label key={team.id} className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={selectedTeamIds.includes(team.id)}
-                  onChange={(e) => {
-                    setSelectedTeamIds((prev) =>
-                      e.target.checked ? [...prev, team.id] : prev.filter((id) => id !== team.id)
-                    );
-                  }}
-                />
-                <span className="text-sm">{team.name}</span>
-              </label>
-            ))}
-          </div>
-          <DialogFooter>
+
+          {/* Selector de Pestañas Interno */}
+          {proposedTeams.length > 0 && (
+            <div className="flex gap-2 border-b pb-2 text-xs">
+              <button
+                type="button"
+                className={`px-3 py-1 rounded font-medium ${viewMode === "manual" ? "bg-green-100 text-green-800" : "text-muted-foreground"}`}
+                onClick={() => setViewMode("manual")}
+              >
+                Todos los equipos ({teams.length})
+              </button>
+              <button
+                type="button"
+                className={`px-3 py-1 rounded font-medium ${viewMode === "ocr_results" ? "bg-green-600 text-white" : "bg-muted text-muted-foreground"}`}
+                onClick={() => setViewMode("ocr_results")}
+              >
+                Sugeridos por IA/OCR ({proposedTeams.length})
+              </button>
+            </div>
+          )}
+
+          {/* VISTA 1: Resultados del Escaneo Inteligente (Azure Vision) */}
+          {viewMode === "ocr_results" && (
+            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1">
+              <div className="rounded-lg border bg-slate-50 p-3">
+                <p className="text-xs font-bold text-slate-700 mb-2">Equipos identificados en la imagen:</p>
+                <div className="space-y-2">
+                  {proposedTeams.map((pt) => (
+                    <div key={pt.id} className="flex items-center justify-between p-2 rounded bg-white border shadow-sm">
+                      <label className="flex items-center gap-3 cursor-pointer flex-1">
+                        <input
+                          type="checkbox"
+                          disabled={pt.already_in_tournament}
+                          checked={selectedTeamIds.includes(pt.id) || pt.already_in_tournament}
+                          onChange={(e) => {
+                            setSelectedTeamIds((prev) =>
+                              e.target.checked ? [...prev, pt.id] : prev.filter((id) => id !== pt.id)
+                            );
+                          }}
+                          className="rounded text-green-600 focus:ring-green-500"
+                        />
+                        <div className="flex items-center gap-2">
+                          {pt.shield_url && (
+                            <img src={pt.shield_url} alt="" className="w-5 h-5 object-contain" />
+                          )}
+                          <span className={`text-sm font-medium ${pt.already_in_tournament ? "text-muted-foreground line-through" : "text-foreground"}`}>
+                            {pt.name}
+                          </span>
+                          {pt.category && <Badge variant="outline" className="text-[10px] py-0">{pt.category}</Badge>}
+                        </div>
+                      </label>
+                      {pt.already_in_tournament && (
+                        <Badge variant="secondary" className="text-[10px] bg-gray-200 text-gray-700">Ya está en el torneo</Badge>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Advertencias de líneas que no coincidieron de forma difusa */}
+              {unmatchedLines.length > 0 && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-3">
+                  <p className="text-xs font-bold text-amber-800 mb-1">Texto en la imagen no asignado:</p>
+                  <ul className="list-disc pl-4 text-[11px] text-amber-700 space-y-0.5">
+                    {unmatchedLines.slice(0, 5).map((line, idx) => (
+                      <li key={idx} className="truncate">“{line}”</li>
+                    ))}
+                    {unmatchedLines.length > 5 && (
+                      <li className="font-medium">y {unmatchedLines.length - 5} líneas más...</li>
+                    )}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* VISTA 2: Selección Manual Convencional */}
+          {viewMode === "manual" && (
+            <div className="grid grid-cols-2 gap-2 max-h-[400px] overflow-y-auto pr-1">
+              {teams.map((team) => (
+                <label key={team.id} className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer border border-transparent hover:border-gray-200 transition-all">
+                  <input
+                    type="checkbox"
+                    checked={selectedTeamIds.includes(team.id)}
+                    onChange={(e) => {
+                      setSelectedTeamIds((prev) =>
+                        e.target.checked ? [...prev, team.id] : prev.filter((id) => id !== team.id)
+                      );
+                    }}
+                    className="rounded text-green-600 focus:ring-green-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700">{team.name}</span>
+                </label>
+              ))}
+            </div>
+          )}
+
+          <DialogFooter className="border-t pt-3">
             <Button variant="outline" onClick={() => setTeamsOpen(false)}>Cancelar</Button>
-            <Button onClick={assignTeams} disabled={selectedTeamIds.length === 0}>
+            <Button 
+              onClick={assignTeams} 
+              disabled={selectedTeamIds.length === 0}
+              className="bg-green-700 hover:bg-green-800 text-white"
+            >
               Guardar equipos ({selectedTeamIds.length})
             </Button>
           </DialogFooter>

@@ -11,3 +11,6 @@ AZURE_FACE_KEY = os.getenv("AZURE_FACE_KEY")
 FACE_PROVIDER = os.getenv("FACE_PROVIDER", "local").lower()
 
 DEFAULT_SYNTHESIS_VOICE = "es-CO-GonzaloNeural"
+# Agregar estas dos líneas
+AZURE_VISION_ENDPOINT = os.getenv("AZURE_VISION_ENDPOINT")
+AZURE_VISION_KEY = os.getenv("AZURE_VISION_KEY")
