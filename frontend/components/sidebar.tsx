@@ -13,16 +13,22 @@ import {
   Trophy,
   CalendarDays,
   Shield,
+  ScanFace,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCurrentUser, isAdmin, clearCurrentUserCache } from "@/lib/useCurrentUser";
 
 const baseNavItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/players", label: "Jugadores", icon: Users },
   { href: "/teams", label: "Equipos", icon: Trophy },
   { href: "/tournaments/templates", label: "Plantillas", icon: CalendarDays },
   { href: "/tournaments/manage", label: "Torneos", icon: Trophy },
+  {
+    href: "/face-verification",
+    label: "Validar identidad",
+    icon: ScanFace,
+  },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
@@ -47,11 +53,16 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
 
   function logout() {
     clearCurrentUserCache();
+
     localStorage.removeItem("access_token");
+
+    document.cookie = "access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     document.cookie = "access_token=; path=/; max-age=0";
+
     toast.success("Sesión cerrada");
-    router.push("/login");
-  }
+
+    window.location.href = "/login";
+}
 
   return (
     <aside

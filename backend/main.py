@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 import time
 import models
 
-from routers import auth, players, teams, templates, tournaments, public, tts, speech, speech_auth
+from routers import auth, players, teams, templates, tournaments, public, tts, speech, speech_auth, face_auth
 from database import engine
 from sqlalchemy import text
 
@@ -33,6 +33,7 @@ app.include_router(public.router)
 app.include_router(tts.router)
 app.include_router(speech.router)  
 app.include_router(speech_auth.router) 
+app.include_router(face_auth.router)
 
 UPLOAD_DIR = "/app/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)

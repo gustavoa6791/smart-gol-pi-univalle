@@ -10,7 +10,6 @@ python-jose[cryptography]==3.3.0
 bcrypt==4.2.1
 
 python-multipart==0.0.17
-openpyxl==3.1.5
 
 pydantic[email]==2.10.4
 pydantic-settings==2.7.0
@@ -19,18 +18,16 @@ python-dotenv==1.0.1
 requests==2.32.3
 
 azure-cognitiveservices-speech==1.37.0
-azure-ai-vision-imageanalysis==1.0.0
-azure-core==1.32.0
 
 numpy==1.26.4
 speechbrain==1.0.2
-opencv-python-headless==4.10.0.84
-# MediaPipe Hands (gestos). Tras instalar, fijar numpy 1.26.4 (ver Dockerfile).
-mediapipe==0.10.14
 
-torch==2.3.1
-torchaudio==2.3.1
-numpy==1.26.4
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+torch==2.3.1+cpu
+torchaudio==2.3.1+cpu
 huggingface_hub==0.23.5
-speechbrain==1.0.2
 soundfile==0.12.1
+azure-core==1.30.2
+azure-ai-vision-face==1.0.0b2
+opencv-contrib-python-headless==4.10.0.84
