@@ -31,3 +31,5 @@ soundfile==0.12.1
 azure-core==1.30.2
 azure-ai-vision-face==1.0.0b2
 opencv-contrib-python-headless==4.10.0.84
+
+openpyxl==3.1.5

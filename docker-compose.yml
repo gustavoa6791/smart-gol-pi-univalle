@@ -37,6 +37,8 @@ services:
       AZURE_FACE_ENDPOINT: "https://smartgolfaceapi.cognitiveservices.azure.com/"
       AZURE_FACE_KEY: ""
       FACE_PROVIDER: "local"
+      AZURE_VISION_KEY: ""
+      AZURE_VISION_ENDPOINT: ""
 
     ports:
       - "8000:8000"
